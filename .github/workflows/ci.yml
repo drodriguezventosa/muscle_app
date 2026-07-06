@@ -32,8 +32,10 @@ jobs:
           POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
         ports:
           - 5432:5432
+        # The `secrets` context is not allowed in service `options`; use the
+        # container's own env vars (set above) inside the health command instead.
         options: >-
-          --health-cmd "pg_isready -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }}"
+          --health-cmd "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       POSTGRES_HOST: localhost
