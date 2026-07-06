@@ -80,7 +80,7 @@ jobs:
       - name: Build frontend image
         run: docker build -t muscleapp-frontend:ci ./frontend
       - name: Scan backend image (Trivy)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: muscleapp-backend:ci
           severity: HIGH,CRITICAL
