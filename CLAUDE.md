@@ -43,7 +43,18 @@ npm run dev        # servidor Vite
 npm run test       # Vitest
 npm run lint       # ESLint + prettier
 npm run test:e2e   # Playwright
+
+# Revisión de PRs y CI (gh CLI disponible y autenticado)
+gh pr view <n>                                 # ver una PR (estado, mergeable, conflictos)
+gh pr checks <n>                               # estado de los checks de CI
+gh pr diff <n>                                 # diff de la PR
+gh run list / gh run view <id> --log-failed    # logs de workflows fallidos
+gh secret list                                 # secrets del repo
 ```
+
+> **`gh` está disponible y autenticado**: úsalo para revisar PRs, checks de CI, diffs,
+> logs de workflows fallidos y gestionar secrets. Para credenciales de servicios usa
+> `gh secret set` (nunca hardcodear). Recuerda: **no hacer commits ni push** (eso es del usuario).
 
 ## Arquitectura (backend hexagonal / ports & adapters)
 
