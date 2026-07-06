@@ -10,19 +10,17 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
+from app.infrastructure.persistence.models import Base
 
-# Import model metadata here once models exist, e.g.:
-#   from app.infrastructure.persistence.models import Base
-#   target_metadata = Base.metadata
-target_metadata = None
+target_metadata = Base.metadata
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Alembic runs synchronously; strip the async driver from the DSN.
-sync_url = get_settings().database_url.replace("+asyncpg", "")
+# Alembic runs synchronously; swap the async driver for the sync psycopg one.
+sync_url = get_settings().database_url.replace("+asyncpg", "+psycopg")
 config.set_main_option("sqlalchemy.url", sync_url)
 
 

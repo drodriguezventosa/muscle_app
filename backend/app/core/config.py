@@ -24,8 +24,9 @@ class Settings(BaseSettings):
 
     # ---- Database ----
     postgres_user: str = "muscle"
-    # Dev-only default; real value is always injected via env in test/prod.
-    postgres_password: str = "muscle_dev_pw"  # noqa: S105
+    # No hardcoded credential: the password must come from the environment
+    # (.env locally, GitHub secrets in CI, platform secrets in deploy).
+    postgres_password: str = ""
     postgres_db: str = "muscle"
     postgres_host: str = "db"
     postgres_port: int = 5432
