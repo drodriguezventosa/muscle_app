@@ -6,9 +6,8 @@ that orchestrators (Cloud Run, Docker) can reach them without the version prefix
 
 from fastapi import APIRouter
 
-api_router = APIRouter()
+from app.api.v1.routers import exercises, muscles
 
-# Feature routers (muscles, exercises, chat) are registered here as they land.
-# Example:
-#   from app.api.v1.routers import muscles
-#   api_router.include_router(muscles.router)
+api_router = APIRouter()
+api_router.include_router(muscles.router)
+api_router.include_router(exercises.router)
