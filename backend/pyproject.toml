@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "muscleapp-backend"
 version = "0.1.0"
@@ -12,13 +16,17 @@ dependencies = [
     "asyncpg>=0.29",
     "alembic>=1.13",
     "pgvector>=0.3",
-    "sentence-transformers>=3.0",
     "httpx>=0.27",
     "slowapi>=0.1.9",
     "structlog>=24.4",
 ]
 
 [project.optional-dependencies]
+# Heavy ML stack (pulls torch). Only needed for the RAG/chatbot feature (phase 5),
+# installed on demand with `.[ai]` to keep CI fast until it's used.
+ai = [
+    "sentence-transformers>=3.0",
+]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
@@ -29,6 +37,10 @@ dev = [
     "pip-audit>=2.7",
     "aiosqlite>=0.20",
 ]
+
+# Package only the application code; `alembic/` and `tests/` are not part of the wheel.
+[tool.setuptools.packages.find]
+include = ["app*"]
 
 [tool.ruff]
 line-length = 100
