@@ -14,9 +14,10 @@ function send(): void {
 </script>
 
 <template>
-  <section class="chat" aria-label="Asistente de recomendaciones">
-    <h2 class="title">Asistente</h2>
-    <p class="hint">Pregunta qué quieres entrenar y te recomiendo ejercicios.</p>
+  <div class="chat">
+    <p v-if="store.messages.length === 0" class="hint">
+      Pregunta qué quieres entrenar y te recomiendo ejercicios.
+    </p>
 
     <ol class="messages" aria-live="polite">
       <li v-for="(message, index) in store.messages" :key="index" :class="['msg', message.role]">
@@ -38,14 +39,14 @@ function send(): void {
         v-model="draft"
         type="text"
         maxlength="500"
-        placeholder="p. ej. quiero entrenar pecho en casa sin material"
+        placeholder="p. ej. entrenar pecho en casa"
         :disabled="store.sending"
       />
       <button type="submit" :disabled="store.sending || !draft.trim()">
-        {{ store.sending ? '…' : 'Enviar' }}
+        {{ store.sending ? '…' : '➤' }}
       </button>
     </form>
-  </section>
+  </div>
 </template>
 
 <style scoped>
@@ -53,14 +54,6 @@ function send(): void {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: var(--space-md);
-}
-.title {
-  margin: 0;
-  font-size: 1.2rem;
 }
 .hint {
   margin: 0;
@@ -74,13 +67,14 @@ function send(): void {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  max-height: 320px;
+  max-height: 46vh;
   overflow-y: auto;
 }
 .msg {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+  animation: fade-in-up 0.3s ease both;
 }
 .msg.user {
   align-items: flex-end;
@@ -88,30 +82,35 @@ function send(): void {
 .bubble {
   margin: 0;
   padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius);
-  max-width: 90%;
+  border-radius: var(--radius-sm);
+  max-width: 92%;
   white-space: pre-line;
+  font-size: 0.92rem;
 }
 .msg.user .bubble {
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--gradient);
+  color: #06121a;
+  font-weight: 600;
 }
 .msg.assistant .bubble {
-  background: var(--color-accent-soft);
+  background: var(--color-surface-strong);
+  border: 1px solid var(--color-border);
   color: var(--color-text);
 }
 .suggestions {
   margin: 0;
   padding-left: var(--space-md);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
 }
 .tag {
   font-size: 0.7rem;
-  color: var(--color-muted);
+  color: var(--color-accent);
 }
 .error {
-  color: #b91c1c;
+  color: var(--color-danger);
   margin: 0;
+  font-size: 0.9rem;
 }
 .composer {
   display: flex;
@@ -119,22 +118,30 @@ function send(): void {
 }
 .composer input {
   flex: 1;
+  min-width: 0;
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text);
   font: inherit;
 }
+.composer input:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: var(--glow);
+}
 .composer button {
-  padding: var(--space-sm) var(--space-md);
+  width: 44px;
   border: none;
-  border-radius: var(--radius);
-  background: var(--color-accent);
-  color: #fff;
-  font: inherit;
+  border-radius: 999px;
+  background: var(--gradient);
+  color: #06121a;
+  font-size: 1rem;
   cursor: pointer;
 }
 .composer button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 .sr-only {
