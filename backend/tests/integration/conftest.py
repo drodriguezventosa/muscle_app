@@ -19,7 +19,9 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.config import Settings
+from app.infrastructure.ai.embeddings import FakeEmbedding
 from app.infrastructure.persistence.database import get_session
+from app.infrastructure.persistence.embeddings_backfill import backfill_embeddings
 from app.infrastructure.persistence.models import Base
 from app.infrastructure.persistence.seed import seed
 from app.main import create_app
@@ -61,6 +63,8 @@ async def api_client(db_engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
     factory = async_sessionmaker(db_engine, expire_on_commit=False)
     async with factory() as db_session:
         await seed(db_session)
+        # Backfill embeddings so the RAG search returns results in tests.
+        await backfill_embeddings(db_session, FakeEmbedding(384))
 
     async def _override_get_session() -> AsyncIterator[AsyncSession]:
         async with factory() as db_session:

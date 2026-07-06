@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 
 import BodyMap from '@/components/BodyMap.vue'
+import ChatBot from '@/components/ChatBot.vue'
 import ExercisePanel from '@/components/ExercisePanel.vue'
 import HealthDisclaimer from '@/components/HealthDisclaimer.vue'
 import { useExplorerStore } from '@/stores/explorer'
@@ -29,13 +30,15 @@ onMounted(() => {
           @select="store.selectMuscle"
         />
       </div>
-      <ExercisePanel
-        class="results"
-        :muscle-name="store.selectedMuscle?.name ?? null"
-        :exercises="store.exercises"
-        :loading="store.loading"
-        :error="store.error"
-      />
+      <div class="results">
+        <ExercisePanel
+          :muscle-name="store.selectedMuscle?.name ?? null"
+          :exercises="store.exercises"
+          :loading="store.loading"
+          :error="store.error"
+        />
+        <ChatBot />
+      </div>
     </div>
   </section>
 </template>
@@ -68,6 +71,11 @@ h1 {
 .map {
   display: flex;
   justify-content: center;
+}
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
 }
 /* Two columns on wider screens: map beside results. */
 @media (min-width: 760px) {

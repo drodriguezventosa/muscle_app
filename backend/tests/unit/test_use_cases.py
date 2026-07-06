@@ -38,6 +38,15 @@ class FakeExerciseRepository(ExerciseRepository):
     async def list_for_muscle(self, muscle_id: int) -> list[Exercise]:
         return [e for e in self._exercises if e.works_muscle(muscle_id)]
 
+    async def search_similar(
+        self,
+        embedding: list[float],
+        limit: int,
+        equipment: Equipment | None = None,
+        difficulty: Difficulty | None = None,
+    ) -> list[Exercise]:
+        return self._exercises[:limit]
+
 
 @pytest.fixture
 def muscles() -> list[Muscle]:

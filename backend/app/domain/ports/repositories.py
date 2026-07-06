@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 
 from app.domain.entities.exercise import Exercise
 from app.domain.entities.muscle import Muscle
+from app.domain.value_objects.enums import Difficulty, Equipment
 
 
 class MuscleRepository(ABC):
@@ -36,3 +37,17 @@ class ExerciseRepository(ABC):
     @abstractmethod
     async def list_for_muscle(self, muscle_id: int) -> list[Exercise]:
         """Return exercises that target the given muscle (primary or secondary)."""
+
+    @abstractmethod
+    async def search_similar(
+        self,
+        embedding: list[float],
+        limit: int,
+        equipment: Equipment | None = None,
+        difficulty: Difficulty | None = None,
+    ) -> list[Exercise]:
+        """Return exercises most similar to the query embedding.
+
+        Exercises without an embedding are excluded. Optional structured filters
+        (equipment, difficulty) narrow the search before ranking by similarity.
+        """
