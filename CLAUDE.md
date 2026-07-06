@@ -80,6 +80,7 @@ Para cambiar de LLM, pagos o BD **no se toca el dominio**: se crea/ajusta un ada
 
 ## Qué NO hacer
 
+- **No hacer commits ni push por tu cuenta**: la gestión de git (commit, push, PRs) la hace siempre el usuario. Aplica los cambios en el árbol de trabajo, valida, y deja que el usuario los commitee. Si un cambio debe llegar a la CI/PR, indica el comando (p.ej. `! git push ...`) en vez de ejecutarlo.
 - No implementar auth/monetización en el MVP (está diferido); pero mantener el modelo preparado para ello.
 - No introducir dependencias de pago ni servicios que rompan el coste 0.
 - No poner lógica de negocio en `api/` ni acceso a BD en `domain/`.
