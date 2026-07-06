@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 import { recommend } from '@/api/chat'
 import type { Exercise } from '@/api/types'
+import { i18n } from '@/i18n'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -30,7 +31,7 @@ export const useChatStore = defineStore('chat', () => {
         exercises: recommendation.exercises,
       })
     } catch {
-      error.value = 'No se pudo obtener la recomendación. Inténtalo de nuevo.'
+      error.value = i18n.global.t('errors.recommend')
     } finally {
       sending.value = false
     }

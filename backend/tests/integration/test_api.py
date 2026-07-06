@@ -11,11 +11,17 @@ async def test_list_muscles(api_client: AsyncClient) -> None:
     assert {"chest", "biceps"} <= {m["svg_id"] for m in body}
 
 
-async def test_get_muscle_found(api_client: AsyncClient) -> None:
+async def test_get_muscle_found_default_spanish(api_client: AsyncClient) -> None:
     response = await api_client.get("/api/v1/muscles/chest")
     assert response.status_code == 200
-    assert response.json()["name"] == "Pectoralis major"
+    assert response.json()["name"] == "Pectoral mayor"
     assert response.json()["muscle_group"] == "chest"
+
+
+async def test_get_muscle_translated_to_english(api_client: AsyncClient) -> None:
+    response = await api_client.get("/api/v1/muscles/chest?lang=en")
+    assert response.status_code == 200
+    assert response.json()["name"] == "Pectoralis major"
 
 
 async def test_get_muscle_not_found(api_client: AsyncClient) -> None:
@@ -27,8 +33,11 @@ async def test_list_muscle_exercises(api_client: AsyncClient) -> None:
     response = await api_client.get("/api/v1/muscles/chest/exercises")
     assert response.status_code == 200
     names = {e["name"] for e in response.json()}
-    assert "Push-up" in names
-    assert "Barbell bench press" in names
+    assert "Flexiones" in names  # default Spanish
+    assert "Press de banca con barra" in names
+
+    english = await api_client.get("/api/v1/muscles/chest/exercises?lang=en")
+    assert "Push-up" in {e["name"] for e in english.json()}
 
 
 async def test_list_muscle_exercises_unknown_muscle_is_404(api_client: AsyncClient) -> None:

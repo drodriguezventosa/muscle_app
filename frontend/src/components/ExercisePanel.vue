@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 import type { Exercise } from '@/api/types'
 
 defineProps<{
@@ -7,17 +9,19 @@ defineProps<{
   loading: boolean
   error: string | null
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
   <section class="panel" aria-live="polite">
     <h2 v-if="muscleName" class="title">{{ muscleName }}</h2>
-    <p v-else class="hint">Selecciona un músculo en el mapa para ver sus ejercicios.</p>
+    <p v-else class="hint">{{ t('panel.prompt') }}</p>
 
     <p v-if="error" class="error" role="alert">{{ error }}</p>
-    <p v-else-if="loading" class="hint">Cargando ejercicios…</p>
+    <p v-else-if="loading" class="hint">{{ t('panel.loading') }}</p>
     <p v-else-if="muscleName && exercises.length === 0" class="hint">
-      Todavía no hay ejercicios para este músculo.
+      {{ t('panel.empty') }}
     </p>
 
     <ul v-if="exercises.length" class="list">
@@ -25,8 +29,8 @@ defineProps<{
         <div class="card-head">
           <h3 class="card-title">{{ exercise.name }}</h3>
           <div class="badges">
-            <span class="badge">{{ exercise.equipment }}</span>
-            <span class="badge badge-soft">{{ exercise.difficulty }}</span>
+            <span class="badge">{{ t(`equipment.${exercise.equipment}`) }}</span>
+            <span class="badge badge-soft">{{ t(`difficulty.${exercise.difficulty}`) }}</span>
           </div>
         </div>
         <p class="card-desc">{{ exercise.description }}</p>

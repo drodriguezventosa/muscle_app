@@ -2,6 +2,12 @@
 
 import { api } from './client'
 import type { Difficulty, Equipment, Exercise, Muscle, MuscleGroup, MuscleRole } from './types'
+import { i18n } from '@/i18n'
+
+// Content locale sent to the backend so names/descriptions come back translated.
+function lang(): string {
+  return i18n.global.locale.value
+}
 
 interface MusclePayload {
   id: number
@@ -47,11 +53,11 @@ export function toExercise(p: ExercisePayload): Exercise {
 }
 
 export async function listMuscles(): Promise<Muscle[]> {
-  const payload = await api.get<MusclePayload[]>('/muscles')
+  const payload = await api.get<MusclePayload[]>(`/muscles?lang=${lang()}`)
   return payload.map(toMuscle)
 }
 
 export async function getMuscleExercises(svgId: string): Promise<Exercise[]> {
-  const payload = await api.get<ExercisePayload[]>(`/muscles/${svgId}/exercises`)
+  const payload = await api.get<ExercisePayload[]>(`/muscles/${svgId}/exercises?lang=${lang()}`)
   return payload.map(toExercise)
 }

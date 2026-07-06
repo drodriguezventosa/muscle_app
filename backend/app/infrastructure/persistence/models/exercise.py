@@ -13,8 +13,12 @@ class ExerciseModel(Base):
     __tablename__ = "exercises"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # `name`/`description` hold the Spanish (default) text; `*_en` are the English
+    # overrides. The repository resolves the right one per requested locale.
     name: Mapped[str] = mapped_column(String(120), unique=True)
+    name_en: Mapped[str | None] = mapped_column(String(120), nullable=True)
     description: Mapped[str] = mapped_column(Text, default="")
+    description_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     equipment: Mapped[Equipment] = mapped_column(SAEnum(Equipment, native_enum=False, length=20))
     difficulty: Mapped[Difficulty] = mapped_column(SAEnum(Difficulty, native_enum=False, length=20))
     # Semantic embedding for RAG search. Nullable: populated by the AI phase.

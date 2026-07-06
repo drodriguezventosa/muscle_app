@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // Legally-relevant notice: exercise guidance is not medical advice.
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 </script>
 
 <template>
-  <p class="disclaimer" role="note">
-    ⚕️ Las recomendaciones de ejercicio son orientativas y no constituyen consejo médico.
-  </p>
+  <p class="disclaimer" role="note">⚕️ {{ t('disclaimer') }}</p>
 </template>
 
 <style scoped>

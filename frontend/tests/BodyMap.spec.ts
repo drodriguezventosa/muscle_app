@@ -3,34 +3,40 @@ import { describe, expect, it } from 'vitest'
 
 import type { Muscle } from '@/api/types'
 import BodyMap from '@/components/BodyMap.vue'
+import { i18n } from '@/i18n'
 
 const muscles: Muscle[] = [
   { id: 1, name: 'Pectoralis major', muscleGroup: 'chest', svgId: 'chest', description: '' },
   { id: 2, name: 'Biceps brachii', muscleGroup: 'arms', svgId: 'biceps', description: '' },
 ]
 
+const mountOptions = {
+  props: { muscles, selected: null as string | null },
+  global: { plugins: [i18n] },
+}
+
 describe('BodyMap', () => {
   it('renders one interactive region per available muscle', () => {
-    const wrapper = mount(BodyMap, { props: { muscles, selected: null } })
+    const wrapper = mount(BodyMap, mountOptions)
     // Only the two provided muscles should be clickable, not all layout regions.
     expect(wrapper.findAll('[role="button"]')).toHaveLength(2)
   })
 
   it('labels regions with the muscle name (accessibility)', () => {
-    const wrapper = mount(BodyMap, { props: { muscles, selected: null } })
+    const wrapper = mount(BodyMap, mountOptions)
     const labels = wrapper.findAll('[role="button"]').map((n) => n.attributes('aria-label'))
     expect(labels).toContain('Pectoralis major')
   })
 
   it('emits select with the svg id when a region is clicked', async () => {
-    const wrapper = mount(BodyMap, { props: { muscles, selected: null } })
+    const wrapper = mount(BodyMap, mountOptions)
     await wrapper.get('[role="button"]').trigger('click')
     expect(wrapper.emitted('select')).toBeTruthy()
     expect(wrapper.emitted('select')?.[0]).toEqual(['chest'])
   })
 
   it('marks the selected region as pressed', () => {
-    const wrapper = mount(BodyMap, { props: { muscles, selected: 'biceps' } })
+    const wrapper = mount(BodyMap, { ...mountOptions, props: { muscles, selected: 'biceps' } })
     const pressed = wrapper
       .findAll('[role="button"]')
       .filter((n) => n.attributes('aria-pressed') === 'true')
