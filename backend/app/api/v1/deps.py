@@ -15,6 +15,9 @@ from app.application.use_cases.muscle_use_cases import (
     ListMuscleExercises,
     ListMuscles,
 )
+from app.application.use_cases.recommend_exercises import RecommendExercises
+from app.core.config import get_settings
+from app.infrastructure.ai.factory import build_embedding, build_llm
 from app.infrastructure.persistence.database import get_session
 from app.infrastructure.persistence.repositories.exercise_repository import (
     SqlAlchemyExerciseRepository,
@@ -43,3 +46,12 @@ def provide_muscle_exercises(session: SessionDep) -> ListMuscleExercises:
 
 def provide_exercise(session: SessionDep) -> GetExercise:
     return GetExercise(SqlAlchemyExerciseRepository(session))
+
+
+def provide_recommend_exercises(session: SessionDep) -> RecommendExercises:
+    settings = get_settings()
+    return RecommendExercises(
+        build_embedding(settings),
+        SqlAlchemyExerciseRepository(session),
+        build_llm(settings),
+    )

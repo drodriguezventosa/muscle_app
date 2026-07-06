@@ -16,7 +16,7 @@ interface TargetedMusclePayload {
   role: MuscleRole
 }
 
-interface ExercisePayload {
+export interface ExercisePayload {
   id: number
   name: string
   description: string
@@ -35,7 +35,7 @@ function toMuscle(p: MusclePayload): Muscle {
   }
 }
 
-function toExercise(p: ExercisePayload): Exercise {
+export function toExercise(p: ExercisePayload): Exercise {
   return {
     id: p.id,
     name: p.name,

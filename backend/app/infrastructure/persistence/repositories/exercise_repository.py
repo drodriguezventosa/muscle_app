@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.exercise import Exercise, TargetedMuscle
 from app.domain.ports.repositories import ExerciseRepository
+from app.domain.value_objects.enums import Difficulty, Equipment
 from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
 
 
@@ -36,5 +37,22 @@ class SqlAlchemyExerciseRepository(ExerciseRepository):
             .where(ExerciseMuscleModel.muscle_id == muscle_id)
             .order_by(ExerciseModel.name)
         )
+        result = await self._session.scalars(stmt)
+        return [_to_entity(m) for m in result.unique()]
+
+    async def search_similar(
+        self,
+        embedding: list[float],
+        limit: int,
+        equipment: Equipment | None = None,
+        difficulty: Difficulty | None = None,
+    ) -> list[Exercise]:
+        stmt = select(ExerciseModel).where(ExerciseModel.embedding.is_not(None))
+        if equipment is not None:
+            stmt = stmt.where(ExerciseModel.equipment == equipment)
+        if difficulty is not None:
+            stmt = stmt.where(ExerciseModel.difficulty == difficulty)
+        # pgvector cosine distance: smaller is more similar.
+        stmt = stmt.order_by(ExerciseModel.embedding.cosine_distance(embedding)).limit(limit)
         result = await self._session.scalars(stmt)
         return [_to_entity(m) for m in result.unique()]

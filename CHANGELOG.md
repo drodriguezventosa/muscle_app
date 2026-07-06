@@ -13,6 +13,13 @@ y el proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
   modelos SQLAlchemy con columna `pgvector`, sesión async, repositorios, migración Alembic inicial
   (extensión `vector` + tablas) y seed idempotente del catálogo. Tests unit + integración y servicio
   Postgres en CI.
+- Endpoints públicos del explorador: `/api/v1/muscles`, `/api/v1/muscles/{svg_id}`,
+  `/api/v1/muscles/{svg_id}/exercises` y `/api/v1/exercises/{id}`.
+- Frontend del explorador: mapa corporal SVG interactivo y accesible (Vue 3 + Pinia) que consume la API.
+- Chatbot de recomendaciones (RAG): puertos `EmbeddingPort`/`LLMPort` con adapters provider-agnostic
+  (embeddings `fake`/sentence-transformers; LLM `stub`/Ollama/Gemini), búsqueda por similitud con
+  `pgvector`, caso de uso con guardas anti prompt-injection + disclaimer, endpoint
+  `POST /api/v1/chat/recommendations` con rate limiting, y backfill de embeddings.
 
 ### Fixed
 - `.gitignore`: el patrón `models/` ignoraba por error el paquete ORM `persistence/models`; acotado

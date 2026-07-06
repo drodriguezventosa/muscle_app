@@ -44,13 +44,18 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
 
     # ---- LLM ----
-    llm_provider: Literal["ollama", "gemini"] = "ollama"
+    # "stub" needs no external service (deterministic reply) — the zero-setup
+    # default; switch to "ollama" (local, free) or "gemini" (free tier) via env.
+    llm_provider: Literal["stub", "ollama", "gemini"] = "stub"
     llm_model: str = "llama3.1"
     ollama_base_url: str = "http://ollama:11434"
     gemini_api_key: str = ""
     gemini_model: str = "gemini-1.5-flash"
 
     # ---- Embeddings ----
+    # "fake" is deterministic and dependency-free (default); "sentence_transformers"
+    # gives real semantic vectors but requires the optional `.[ai]` extra (torch).
+    embedding_provider: Literal["fake", "sentence_transformers"] = "fake"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     embedding_dim: int = 384
 
