@@ -12,13 +12,15 @@ updates:
     directory: /frontend
     schedule:
       interval: monthly
+    # Group only non-breaking updates into a single PR. Major bumps of the
+    # frontend toolchain (Vite, Vitest, TypeScript, Vue Router, Pinia, ESLint,
+    # etc.) are breaking migrations, so we ignore them here and upgrade them
+    # deliberately instead of receiving one giant "bomb" PR.
     groups:
-      npm-deps:
-        patterns: ["*"]
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
     ignore:
-      # ESLint 9+ requires a flat-config migration (eslint.config.js). Hold the
-      # major until we migrate; minor/patch updates still flow through.
-      - dependency-name: "eslint"
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
