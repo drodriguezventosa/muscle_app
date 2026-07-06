@@ -7,28 +7,29 @@ from app.domain.entities.exercise import Exercise, TargetedMuscle
 from app.domain.ports.repositories import ExerciseRepository
 from app.domain.value_objects.enums import Difficulty, Equipment
 from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
-
-
-def _to_entity(model: ExerciseModel) -> Exercise:
-    return Exercise(
-        id=model.id,
-        name=model.name,
-        description=model.description,
-        equipment=model.equipment,
-        difficulty=model.difficulty,
-        targeted_muscles=tuple(
-            TargetedMuscle(muscle_id=link.muscle_id, role=link.role) for link in model.muscles
-        ),
-    )
+from app.infrastructure.persistence.repositories.localize import pick
 
 
 class SqlAlchemyExerciseRepository(ExerciseRepository):
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, locale: str = "es") -> None:
         self._session = session
+        self._locale = locale
+
+    def _to_entity(self, model: ExerciseModel) -> Exercise:
+        return Exercise(
+            id=model.id,
+            name=pick(model.name, model.name_en, self._locale),
+            description=pick(model.description, model.description_en, self._locale),
+            equipment=model.equipment,
+            difficulty=model.difficulty,
+            targeted_muscles=tuple(
+                TargetedMuscle(muscle_id=link.muscle_id, role=link.role) for link in model.muscles
+            ),
+        )
 
     async def get_by_id(self, exercise_id: int) -> Exercise | None:
         model = await self._session.get(ExerciseModel, exercise_id)
-        return _to_entity(model) if model else None
+        return self._to_entity(model) if model else None
 
     async def list_for_muscle(self, muscle_id: int) -> list[Exercise]:
         stmt = (
@@ -38,7 +39,7 @@ class SqlAlchemyExerciseRepository(ExerciseRepository):
             .order_by(ExerciseModel.name)
         )
         result = await self._session.scalars(stmt)
-        return [_to_entity(m) for m in result.unique()]
+        return [self._to_entity(m) for m in result.unique()]
 
     async def search_similar(
         self,
@@ -55,4 +56,4 @@ class SqlAlchemyExerciseRepository(ExerciseRepository):
         # pgvector cosine distance: smaller is more similar.
         stmt = stmt.order_by(ExerciseModel.embedding.cosine_distance(embedding)).limit(limit)
         result = await self._session.scalars(stmt)
-        return [_to_entity(m) for m in result.unique()]
+        return [self._to_entity(m) for m in result.unique()]

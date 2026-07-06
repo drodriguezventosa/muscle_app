@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useChatStore } from '@/stores/chat'
 
 const store = useChatStore()
+const { t } = useI18n()
 const draft = ref('')
 
 function send(): void {
@@ -15,16 +17,14 @@ function send(): void {
 
 <template>
   <div class="chat">
-    <p v-if="store.messages.length === 0" class="hint">
-      Pregunta qué quieres entrenar y te recomiendo ejercicios.
-    </p>
+    <p v-if="store.messages.length === 0" class="hint">{{ t('chat.intro') }}</p>
 
     <ol class="messages" aria-live="polite">
       <li v-for="(message, index) in store.messages" :key="index" :class="['msg', message.role]">
         <p class="bubble">{{ message.text }}</p>
         <ul v-if="message.exercises && message.exercises.length" class="suggestions">
           <li v-for="exercise in message.exercises" :key="exercise.id">
-            {{ exercise.name }} <span class="tag">{{ exercise.equipment }}</span>
+            {{ exercise.name }} <span class="tag">{{ t(`equipment.${exercise.equipment}`) }}</span>
           </li>
         </ul>
       </li>
@@ -33,13 +33,13 @@ function send(): void {
     <p v-if="store.error" class="error" role="alert">{{ store.error }}</p>
 
     <form class="composer" @submit.prevent="send">
-      <label class="sr-only" for="chat-input">Tu consulta</label>
+      <label class="sr-only" for="chat-input">{{ t('chat.inputLabel') }}</label>
       <input
         id="chat-input"
         v-model="draft"
         type="text"
         maxlength="500"
-        placeholder="p. ej. entrenar pecho en casa"
+        :placeholder="t('chat.placeholder')"
         :disabled="store.sending"
       />
       <button type="submit" :disabled="store.sending || !draft.trim()">

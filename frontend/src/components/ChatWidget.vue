@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import ChatBot from '@/components/ChatBot.vue'
 
+const { t } = useI18n()
 const open = ref(false)
 
 function toggle(): void {
@@ -13,16 +15,17 @@ function toggle(): void {
 <template>
   <div class="widget">
     <Transition name="panel">
-      <section
-        v-if="open"
-        class="panel glass"
-        role="dialog"
-        aria-label="Asistente de recomendaciones"
-      >
+      <section v-if="open" class="panel glass" role="dialog" :aria-label="t('chat.title')">
         <header class="panel-head">
           <span class="status" aria-hidden="true"></span>
-          <strong class="gradient-text">Asistente</strong>
-          <button class="close" type="button" aria-label="Cerrar asistente" @click="toggle">
+          <strong class="gradient-text">{{ t('chat.title') }}</strong>
+          <button
+            class="close"
+            type="button"
+            data-testid="chat-close"
+            :aria-label="t('chat.close')"
+            @click="toggle"
+          >
             ✕
           </button>
         </header>
@@ -33,8 +36,9 @@ function toggle(): void {
     <button
       class="bubble"
       type="button"
+      data-testid="chat-toggle"
       :aria-expanded="open"
-      aria-label="Abrir asistente de recomendaciones"
+      :aria-label="t('chat.open')"
       @click="toggle"
     >
       <span class="bubble-icon">{{ open ? '✕' : '💬' }}</span>

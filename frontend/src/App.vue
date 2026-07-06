@@ -2,6 +2,7 @@
 import { RouterView } from 'vue-router'
 
 import ChatWidget from '@/components/ChatWidget.vue'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 </script>
 
 <template>
@@ -10,6 +11,7 @@ import ChatWidget from '@/components/ChatWidget.vue'
       <span class="logo" aria-hidden="true">◆</span>
       <span class="gradient-text">MuscleApp</span>
     </span>
+    <LanguageSwitcher />
   </header>
   <main class="app-main">
     <RouterView />
@@ -26,6 +28,8 @@ import ChatWidget from '@/components/ChatWidget.vue'
   z-index: 20;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
   padding: var(--space-md) var(--space-lg);
   background: rgba(7, 11, 22, 0.6);
   border-bottom: 1px solid var(--color-border);

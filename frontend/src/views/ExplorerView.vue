@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import BodyMap from '@/components/BodyMap.vue'
 import ExercisePanel from '@/components/ExercisePanel.vue'
@@ -7,18 +8,30 @@ import HealthDisclaimer from '@/components/HealthDisclaimer.vue'
 import { useExplorerStore } from '@/stores/explorer'
 
 const store = useExplorerStore()
+const { t, locale } = useI18n()
 
 onMounted(() => {
   void store.loadMuscles()
+})
+
+// Re-fetch localized content when the language changes.
+watch(locale, () => {
+  void store.loadMuscles()
+  if (store.selectedSvgId) {
+    void store.selectMuscle(store.selectedSvgId)
+  }
 })
 </script>
 
 <template>
   <section class="explorer">
     <header class="intro animate-in">
-      <p class="eyebrow">Explorador muscular</p>
-      <h1><span class="gradient-text">Entrena cada músculo</span> con criterio</h1>
-      <p class="lead">Pulsa un músculo del mapa para descubrir los ejercicios que lo trabajan.</p>
+      <p class="eyebrow">{{ t('explorer.eyebrow') }}</p>
+      <h1>
+        <span class="gradient-text">{{ t('explorer.titleHighlight') }}</span>
+        {{ t('explorer.titleRest') }}
+      </h1>
+      <p class="lead">{{ t('explorer.lead') }}</p>
       <HealthDisclaimer />
     </header>
 

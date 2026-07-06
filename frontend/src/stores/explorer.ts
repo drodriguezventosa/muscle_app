@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import { getMuscleExercises, listMuscles } from '@/api/explorer'
 import type { Exercise, Muscle } from '@/api/types'
+import { i18n } from '@/i18n'
 
 export const useExplorerStore = defineStore('explorer', () => {
   const muscles = ref<Muscle[]>([])
@@ -20,7 +21,7 @@ export const useExplorerStore = defineStore('explorer', () => {
     try {
       muscles.value = await listMuscles()
     } catch {
-      error.value = 'No se pudieron cargar los músculos.'
+      error.value = i18n.global.t('errors.loadMuscles')
     }
   }
 
@@ -32,7 +33,7 @@ export const useExplorerStore = defineStore('explorer', () => {
     try {
       exercises.value = await getMuscleExercises(svgId)
     } catch {
-      error.value = 'No se pudieron cargar los ejercicios.'
+      error.value = i18n.global.t('errors.loadExercises')
     } finally {
       loading.value = false
     }

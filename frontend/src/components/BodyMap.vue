@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import type { Muscle } from '@/api/types'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   muscles: Muscle[]
@@ -108,12 +111,7 @@ function onSelect(svgId: string): void {
 </script>
 
 <template>
-  <svg
-    class="body-map"
-    viewBox="0 0 520 320"
-    role="group"
-    aria-label="Mapa muscular interactivo: frente y espalda"
-  >
+  <svg class="body-map" viewBox="0 0 520 320" role="group" :aria-label="t('bodyMap.label')">
     <defs>
       <linearGradient id="muscleGrad" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stop-color="#22d3ee" />
@@ -133,8 +131,8 @@ function onSelect(svgId: string): void {
       </template>
     </g>
 
-    <text x="140" y="26" class="caption">Frente</text>
-    <text x="380" y="26" class="caption">Espalda</text>
+    <text x="140" y="26" class="caption">{{ t('bodyMap.front') }}</text>
+    <text x="380" y="26" class="caption">{{ t('bodyMap.back') }}</text>
 
     <!-- Interactive muscle regions -->
     <g

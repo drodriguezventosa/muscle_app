@@ -23,7 +23,11 @@ async def backfill_embeddings(session: AsyncSession, embedding: EmbeddingPort) -
     if not models:
         return 0
 
-    texts = [f"{model.name}. {model.description}" for model in models]
+    # Embed both languages so semantic search works regardless of query locale.
+    texts = [
+        " ".join(filter(None, [model.name, model.name_en, model.description, model.description_en]))
+        for model in models
+    ]
     vectors = await embedding.embed_many(texts)
     for model, vector in zip(models, vectors, strict=True):
         model.embedding = vector
