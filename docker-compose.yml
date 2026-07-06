@@ -5,7 +5,8 @@ services:
     image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-muscle}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-muscle_dev_pw}
+      # Required from .env (no hardcoded credential). Copy .env.example to .env.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-muscle}
     volumes:
       - db_data:/var/lib/postgresql/data

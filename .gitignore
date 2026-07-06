@@ -25,9 +25,12 @@ frontend/.vite/
 npm-debug.log*
 pnpm-debug.log*
 
-# ---- ML models cache (sentence-transformers) ----
-.cache/
-models/
+# ---- ML models cache (sentence-transformers / HuggingFace) ----
+# Scoped to a repo-root cache dir so it does NOT match Python packages named
+# "models" (e.g. app/infrastructure/persistence/models).
+/.cache/
+/.hf_cache/
+/backend/.models_cache/
 
 # ---- Docker / infra ----
 *.pid
