@@ -1,0 +1,40 @@
+# DEVELOPMENT overrides (applied automatically by `docker compose up`).
+# Hot-reload, exposed ports and an optional Ollama service for the local LLM.
+services:
+  db:
+    ports:
+      - "5432:5432"
+
+  backend:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+
+  # Free local LLM for development. Enable it with: `docker compose --profile llm up`
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["llm"]
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - muscle_net
+
+volumes:
+  ollama_data:
