@@ -19,6 +19,9 @@ class ExerciseModel(Base):
     name_en: Mapped[str | None] = mapped_column(String(120), nullable=True)
     description: Mapped[str] = mapped_column(Text, default="")
     description_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Demonstration videos (YouTube URLs): default Spanish + English override.
+    video_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    video_url_en: Mapped[str | None] = mapped_column(String(255), nullable=True)
     equipment: Mapped[Equipment] = mapped_column(SAEnum(Equipment, native_enum=False, length=20))
     difficulty: Mapped[Difficulty] = mapped_column(SAEnum(Difficulty, native_enum=False, length=20))
     # Semantic embedding for RAG search. Nullable: populated by the AI phase.

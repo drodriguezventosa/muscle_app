@@ -29,7 +29,7 @@ function toggle(): void {
             ✕
           </button>
         </header>
-        <ChatBot />
+        <ChatBot @navigate="open = false" />
       </section>
     </Transition>
 

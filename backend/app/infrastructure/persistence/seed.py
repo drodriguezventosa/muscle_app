@@ -2,7 +2,7 @@
 
 Run as a script (`python -m app.infrastructure.persistence.seed`) or import
 `seed` and call it with a session. Embeddings are left null here and computed by
-the AI phase. `name`/`description` hold Spanish; `*_en` hold English.
+the AI phase. `name`/`description`/`video_url` hold Spanish; `*_en` hold English.
 """
 
 import asyncio
@@ -14,6 +14,11 @@ from app.domain.value_objects.enums import Difficulty, Equipment, MuscleGroup, M
 from app.infrastructure.persistence.database import get_session_factory
 from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
 from app.infrastructure.persistence.models.muscle import MuscleModel
+
+
+def _yt(video_id: str) -> str:
+    return f"https://www.youtube.com/watch?v={video_id}"
+
 
 # (name_es, name_en, group, svg_id, description_es, description_en)
 MUSCLES: list[tuple[str, str, MuscleGroup, str, str, str]] = [
@@ -99,13 +104,17 @@ MUSCLES: list[tuple[str, str, MuscleGroup, str, str, str]] = [
     ),
 ]
 
-# (name_es, name_en, description_es, description_en, equipment, difficulty, [(svg_id, role)])
-EXERCISES: list[tuple[str, str, str, str, Equipment, Difficulty, list[tuple[str, MuscleRole]]]] = [
+# (name_es, name_en, desc_es, desc_en, video_es, video_en, equipment, difficulty, links)
+EXERCISES: list[
+    tuple[str, str, str, str, str, str, Equipment, Difficulty, list[tuple[str, MuscleRole]]]
+] = [
     (
         "Flexiones",
         "Push-up",
         "Empuje con el peso corporal desde el suelo.",
         "Bodyweight press from the floor.",
+        _yt("sKmzcJKGKMI"),
+        _yt("WDIpL0pjun0"),
         Equipment.BODYWEIGHT,
         Difficulty.BEGINNER,
         [
@@ -119,6 +128,8 @@ EXERCISES: list[tuple[str, str, str, str, Equipment, Difficulty, list[tuple[str,
         "Barbell bench press",
         "Empuja una barra tumbado en un banco.",
         "Press a barbell while lying on a bench.",
+        _yt("fqsTgdTPRQU"),
+        _yt("Pp8rHcFVIYg"),
         Equipment.BARBELL,
         Difficulty.INTERMEDIATE,
         [("chest", MuscleRole.PRIMARY), ("triceps", MuscleRole.SECONDARY)],
@@ -128,6 +139,8 @@ EXERCISES: list[tuple[str, str, str, str, Equipment, Difficulty, list[tuple[str,
         "Pull-up",
         "Elévate hasta una barra con agarre prono.",
         "Pull the body up to a bar with an overhand grip.",
+        _yt("8mhDd9Ahl1M"),
+        _yt("TMnxKjdYcME"),
         Equipment.BODYWEIGHT,
         Difficulty.ADVANCED,
         [("lats", MuscleRole.PRIMARY), ("biceps", MuscleRole.SECONDARY)],
@@ -137,6 +150,8 @@ EXERCISES: list[tuple[str, str, str, str, Equipment, Difficulty, list[tuple[str,
         "Bent-over row",
         "Rema una barra hacia el torso con el cuerpo inclinado.",
         "Row a barbell toward the torso while hinged forward.",
+        _yt("3uiWjik2yEQ"),
+        _yt("rqTOAM8WoeM"),
         Equipment.BARBELL,
         Difficulty.INTERMEDIATE,
         [
@@ -150,6 +165,8 @@ EXERCISES: list[tuple[str, str, str, str, Equipment, Difficulty, list[tuple[str,
         "Overhead press",
         "Empuja una barra por encima de la cabeza desde los hombros.",
         "Press a barbell overhead from the shoulders.",
+        _yt("OHxSwnkSxB8"),
+        _yt("a81SaIpjGlA"),
         Equipment.BARBELL,
         Difficulty.INTERMEDIATE,
         [("delts", MuscleRole.PRIMARY), ("triceps", MuscleRole.SECONDARY)],
@@ -159,6 +176,8 @@ EXERCISES: list[tuple[str, str, str, str, Equipment, Difficulty, list[tuple[str,
         "Dumbbell biceps curl",
         "Flexiona las mancuernas hacia los hombros.",
         "Curl dumbbells toward the shoulders.",
+        _yt("RsHskJ9k_p0"),
+        _yt("ykJmrZ5v0Oo"),
         Equipment.DUMBBELL,
         Difficulty.BEGINNER,
         [("biceps", MuscleRole.PRIMARY)],
@@ -168,6 +187,8 @@ EXERCISES: list[tuple[str, str, str, str, Equipment, Difficulty, list[tuple[str,
         "Triceps rope pushdown",
         "Extiende los codos contra una polea.",
         "Extend the elbows against a cable.",
+        _yt("20incKRiLek"),
+        _yt("qHDrQglWgS4"),
         Equipment.CABLE,
         Difficulty.BEGINNER,
         [("triceps", MuscleRole.PRIMARY)],
@@ -177,6 +198,8 @@ EXERCISES: list[tuple[str, str, str, str, Equipment, Difficulty, list[tuple[str,
         "Plank",
         "Mantén el cuerpo recto apoyado en los antebrazos.",
         "Hold a straight-body position on the forearms.",
+        _yt("nmX0DysvqcQ"),
+        _yt("mwlp75MS6Rg"),
         Equipment.BODYWEIGHT,
         Difficulty.BEGINNER,
         [("abs", MuscleRole.PRIMARY)],
@@ -186,6 +209,8 @@ EXERCISES: list[tuple[str, str, str, str, Equipment, Difficulty, list[tuple[str,
         "Barbell back squat",
         "Sentadilla con una barra sobre la espalda alta.",
         "Squat with a barbell across the upper back.",
+        _yt("TPoVS6ag6l4"),
+        _yt("eMYjBnIVb_A"),
         Equipment.BARBELL,
         Difficulty.INTERMEDIATE,
         [
@@ -199,6 +224,8 @@ EXERCISES: list[tuple[str, str, str, str, Equipment, Difficulty, list[tuple[str,
         "Romanian deadlift",
         "Bisagra de cadera con barra para la cadena posterior.",
         "Hip-hinge with a barbell to load the posterior chain.",
+        _yt("rjvlSfZ-PQw"),
+        _yt("7j-2w4-P14I"),
         Equipment.BARBELL,
         Difficulty.INTERMEDIATE,
         [("hamstrings", MuscleRole.PRIMARY), ("glutes", MuscleRole.SECONDARY)],
@@ -226,12 +253,24 @@ async def seed(session: AsyncSession) -> bool:
     session.add_all(muscles.values())
     await session.flush()  # assign muscle ids
 
-    for name_es, name_en, desc_es, desc_en, equipment, difficulty, links in EXERCISES:
+    for (
+        name_es,
+        name_en,
+        desc_es,
+        desc_en,
+        video_es,
+        video_en,
+        equipment,
+        difficulty,
+        links,
+    ) in EXERCISES:
         exercise = ExerciseModel(
             name=name_es,
             name_en=name_en,
             description=desc_es,
             description_en=desc_en,
+            video_url=video_es,
+            video_url_en=video_en,
             equipment=equipment,
             difficulty=difficulty,
         )

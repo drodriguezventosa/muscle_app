@@ -18,6 +18,11 @@ export default {
     loading: 'Loading exercises…',
     empty: 'No exercises for this muscle yet.',
   },
+  video: {
+    watch: 'Watch example',
+    close: 'Close video',
+    dialogLabel: 'Exercise video',
+  },
   chat: {
     title: 'Assistant',
     intro: 'Ask what you want to train and I will recommend exercises.',
@@ -25,6 +30,7 @@ export default {
     inputLabel: 'Your question',
     open: 'Open the recommendation assistant',
     close: 'Close the assistant',
+    viewInExplorer: 'View {name} in the explorer',
   },
   errors: {
     loadMuscles: 'Could not load the muscles.',

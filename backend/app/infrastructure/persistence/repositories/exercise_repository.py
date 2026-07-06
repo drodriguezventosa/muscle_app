@@ -16,12 +16,16 @@ class SqlAlchemyExerciseRepository(ExerciseRepository):
         self._locale = locale
 
     def _to_entity(self, model: ExerciseModel) -> Exercise:
+        video = model.video_url
+        if self._locale == "en" and model.video_url_en:
+            video = model.video_url_en
         return Exercise(
             id=model.id,
             name=pick(model.name, model.name_en, self._locale),
             description=pick(model.description, model.description_en, self._locale),
             equipment=model.equipment,
             difficulty=model.difficulty,
+            video_url=video,
             targeted_muscles=tuple(
                 TargetedMuscle(muscle_id=link.muscle_id, role=link.role) for link in model.muscles
             ),

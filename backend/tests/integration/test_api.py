@@ -39,6 +39,12 @@ async def test_list_muscle_exercises(api_client: AsyncClient) -> None:
     english = await api_client.get("/api/v1/muscles/chest/exercises?lang=en")
     assert "Push-up" in {e["name"] for e in english.json()}
 
+    # The demonstration video is localized too (ES vs EN URLs differ).
+    push_up_es = next(e for e in response.json() if e["name"] == "Flexiones")
+    push_up_en = next(e for e in english.json() if e["name"] == "Push-up")
+    assert push_up_es["video_url"] and push_up_en["video_url"]
+    assert push_up_es["video_url"] != push_up_en["video_url"]
+
 
 async def test_list_muscle_exercises_unknown_muscle_is_404(api_client: AsyncClient) -> None:
     response = await api_client.get("/api/v1/muscles/nope/exercises")

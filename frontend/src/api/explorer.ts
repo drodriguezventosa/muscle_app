@@ -28,6 +28,7 @@ export interface ExercisePayload {
   description: string
   equipment: Equipment
   difficulty: Difficulty
+  video_url: string | null
   targeted_muscles: TargetedMusclePayload[]
 }
 
@@ -48,6 +49,7 @@ export function toExercise(p: ExercisePayload): Exercise {
     description: p.description,
     equipment: p.equipment,
     difficulty: p.difficulty,
+    videoUrl: p.video_url,
     targetedMuscles: p.targeted_muscles.map((t) => ({ muscleId: t.muscle_id, role: t.role })),
   }
 }

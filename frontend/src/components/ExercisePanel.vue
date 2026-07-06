@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import VideoModal from '@/components/VideoModal.vue'
 import type { Exercise } from '@/api/types'
 
 defineProps<{
@@ -11,6 +13,7 @@ defineProps<{
 }>()
 
 const { t } = useI18n()
+const activeVideo = ref<{ url: string; title: string } | null>(null)
 </script>
 
 <template>
@@ -34,8 +37,23 @@ const { t } = useI18n()
           </div>
         </div>
         <p class="card-desc">{{ exercise.description }}</p>
+        <button
+          v-if="exercise.videoUrl"
+          class="watch"
+          type="button"
+          @click="activeVideo = { url: exercise.videoUrl, title: exercise.name }"
+        >
+          <span class="play" aria-hidden="true">▶</span> {{ t('video.watch') }}
+        </button>
       </li>
     </ul>
+
+    <VideoModal
+      v-if="activeVideo"
+      :url="activeVideo.url"
+      :title="activeVideo.title"
+      @close="activeVideo = null"
+    />
   </section>
 </template>
 
@@ -83,6 +101,9 @@ const { t } = useI18n()
   position: absolute;
   inset: 0;
   border-radius: inherit;
+  /* Decorative gradient hairline: must never intercept clicks on the card's
+     controls (it's positioned, so it would otherwise sit above the button). */
+  pointer-events: none;
   padding: 1px;
   background: var(--gradient);
   -webkit-mask:
@@ -141,5 +162,39 @@ const { t } = useI18n()
 .card-desc {
   margin: var(--space-sm) 0 0;
   color: var(--color-muted);
+}
+.watch {
+  margin-top: var(--space-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+.watch:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--glow);
+  transform: translateY(-1px);
+}
+.play {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--gradient);
+  color: #06121a;
+  font-size: 0.6rem;
 }
 </style>

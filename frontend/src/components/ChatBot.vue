@@ -1,17 +1,41 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import type { Exercise } from '@/api/types'
+import VideoModal from '@/components/VideoModal.vue'
 import { useChatStore } from '@/stores/chat'
+import { useExplorerStore } from '@/stores/explorer'
+
+// Emitted when the user jumps to an exercise, so the widget can close its panel.
+const emit = defineEmits<{ navigate: [] }>()
 
 const store = useChatStore()
+const explorer = useExplorerStore()
 const { t } = useI18n()
 const draft = ref('')
+const activeVideo = ref<{ url: string; title: string } | null>(null)
 
 function send(): void {
   const message = draft.value
   draft.value = ''
   void store.ask(message)
+}
+
+// Select the exercise's primary muscle in the explorer, scroll to it, close chat.
+async function goToExercise(exercise: Exercise): Promise<void> {
+  const target =
+    exercise.targetedMuscles.find((m) => m.role === 'primary') ?? exercise.targetedMuscles[0]
+  if (!target) return
+
+  if (explorer.muscles.length === 0) await explorer.loadMuscles()
+  const svgId = explorer.muscles.find((m) => m.id === target.muscleId)?.svgId
+  if (!svgId) return
+
+  await explorer.selectMuscle(svgId)
+  emit('navigate')
+  await nextTick()
+  document.getElementById('explorer-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 </script>
 
@@ -23,8 +47,24 @@ function send(): void {
       <li v-for="(message, index) in store.messages" :key="index" :class="['msg', message.role]">
         <p class="bubble">{{ message.text }}</p>
         <ul v-if="message.exercises && message.exercises.length" class="suggestions">
-          <li v-for="exercise in message.exercises" :key="exercise.id">
-            {{ exercise.name }} <span class="tag">{{ t(`equipment.${exercise.equipment}`) }}</span>
+          <li v-for="exercise in message.exercises" :key="exercise.id" class="suggestion">
+            <button
+              type="button"
+              class="link"
+              :title="t('chat.viewInExplorer', { name: exercise.name })"
+              @click="goToExercise(exercise)"
+            >
+              {{ exercise.name }}
+            </button>
+            <span class="tag">{{ t(`equipment.${exercise.equipment}`) }}</span>
+            <button
+              v-if="exercise.videoUrl"
+              type="button"
+              class="watch-mini"
+              @click="activeVideo = { url: exercise.videoUrl, title: exercise.name }"
+            >
+              <span aria-hidden="true">▶</span> {{ t('video.watch') }}
+            </button>
           </li>
         </ul>
       </li>
@@ -46,6 +86,13 @@ function send(): void {
         {{ store.sending ? '…' : '➤' }}
       </button>
     </form>
+
+    <VideoModal
+      v-if="activeVideo"
+      :url="activeVideo.url"
+      :title="activeVideo.title"
+      @close="activeVideo = null"
+    />
   </div>
 </template>
 
@@ -98,14 +145,61 @@ function send(): void {
   color: var(--color-text);
 }
 .suggestions {
-  margin: 0;
-  padding-left: var(--space-md);
+  list-style: none;
+  margin: var(--space-xs) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
   font-size: 0.85rem;
-  color: var(--color-muted);
+}
+.suggestion {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.link:hover {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
 }
 .tag {
   font-size: 0.7rem;
   color: var(--color-accent);
+}
+.watch-mini {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.watch-mini:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--glow);
 }
 .error {
   color: var(--color-danger);

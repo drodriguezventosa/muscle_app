@@ -21,6 +21,7 @@ const exercises: Exercise[] = [
     description: '',
     equipment: 'bodyweight',
     difficulty: 'beginner',
+    videoUrl: null,
     targetedMuscles: [{ muscleId: 1, role: 'primary' }],
   },
 ]
