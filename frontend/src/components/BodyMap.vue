@@ -114,6 +114,13 @@ function onSelect(svgId: string): void {
     role="group"
     aria-label="Mapa muscular interactivo: frente y espalda"
   >
+    <defs>
+      <linearGradient id="muscleGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#22d3ee" />
+        <stop offset="100%" stop-color="#a855f7" />
+      </linearGradient>
+    </defs>
+
     <!-- Non-interactive silhouettes for context -->
     <g class="silhouette" aria-hidden="true">
       <template v-for="cx in [140, 380]" :key="cx">
@@ -164,13 +171,16 @@ function onSelect(svgId: string): void {
 }
 .silhouette circle,
 .silhouette rect {
-  fill: var(--color-border);
+  fill: rgba(255, 255, 255, 0.06);
+  stroke: var(--color-border);
+  stroke-width: 1;
 }
 .caption {
   fill: var(--color-muted);
   font-size: 13px;
   text-anchor: middle;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 .muscle {
   cursor: pointer;
@@ -180,22 +190,44 @@ function onSelect(svgId: string): void {
   fill: var(--color-accent-soft);
   stroke: var(--color-accent);
   stroke-width: 1.5;
-  transition: fill 0.15s ease;
+  transition:
+    fill 0.25s ease,
+    filter 0.25s ease,
+    transform 0.25s ease;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 .muscle:hover ellipse,
 .muscle:focus-visible ellipse {
-  fill: var(--color-accent);
+  fill: url(#muscleGrad);
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.8));
 }
 .muscle.selected ellipse {
-  fill: var(--color-accent);
+  fill: url(#muscleGrad);
+  filter: drop-shadow(0 0 9px rgba(168, 85, 247, 0.9));
+}
+.muscle.selected {
+  animation: muscle-pulse 1.8s ease-in-out infinite;
 }
 .muscle:focus-visible ellipse {
-  stroke: var(--color-text);
+  stroke: #fff;
   stroke-width: 2.5;
+}
+@keyframes muscle-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .muscle ellipse {
     transition: none;
+  }
+  .muscle.selected {
+    animation: none;
   }
 }
 </style>

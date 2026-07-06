@@ -50,7 +50,7 @@ defineProps<{
   margin: 0;
 }
 .error {
-  color: #b91c1c;
+  color: var(--color-danger);
   margin: 0;
 }
 .list {
@@ -62,11 +62,48 @@ defineProps<{
   gap: var(--space-sm);
 }
 .card {
-  background: var(--color-surface);
+  position: relative;
+  background: var(--color-surface-strong);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: var(--space-md);
-  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  animation: fade-in-up 0.4s ease both;
+}
+/* Gradient hairline that lights up on hover. */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--gradient);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--glow);
+}
+.card:hover::before {
+  opacity: 1;
+}
+.card:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.card:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.card:nth-child(4) {
+  animation-delay: 0.15s;
 }
 .card-head {
   display: flex;
@@ -87,10 +124,11 @@ defineProps<{
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: 999px;
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--gradient);
+  color: #06121a;
+  font-weight: 700;
 }
 .badge-soft {
   background: var(--color-accent-soft);
