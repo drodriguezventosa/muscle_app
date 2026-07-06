@@ -1,0 +1,51 @@
+# Base environment (shared by dev and prod). Development-only tweaks live in
+# docker-compose.override.yml, which Compose merges automatically.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-muscle}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-muscle_dev_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-muscle}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-muscle} -d ${POSTGRES_DB:-muscle}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - muscle_net
+
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').status==200 else sys.exit(1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - muscle_net
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    networks:
+      - muscle_net
+
+volumes:
+  db_data:
+
+networks:
+  muscle_net:
+    driver: bridge
