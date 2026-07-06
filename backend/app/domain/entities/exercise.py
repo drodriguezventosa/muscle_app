@@ -26,6 +26,8 @@ class Exercise:
     equipment: Equipment
     difficulty: Difficulty
     targeted_muscles: tuple[TargetedMuscle, ...] = field(default_factory=tuple)
+    # Demonstration video for the requested locale (YouTube URL), if available.
+    video_url: str | None = None
     id: int | None = None
 
     def works_muscle(self, muscle_id: int) -> bool:

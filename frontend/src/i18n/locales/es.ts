@@ -18,6 +18,11 @@ export default {
     loading: 'Cargando ejercicios…',
     empty: 'Todavía no hay ejercicios para este músculo.',
   },
+  video: {
+    watch: 'Ver ejemplo',
+    close: 'Cerrar vídeo',
+    dialogLabel: 'Vídeo del ejercicio',
+  },
   chat: {
     title: 'Asistente',
     intro: 'Pregunta qué quieres entrenar y te recomiendo ejercicios.',
@@ -25,6 +30,7 @@ export default {
     inputLabel: 'Tu consulta',
     open: 'Abrir asistente de recomendaciones',
     close: 'Cerrar asistente',
+    viewInExplorer: 'Ver {name} en el explorador',
   },
   errors: {
     loadMuscles: 'No se pudieron cargar los músculos.',

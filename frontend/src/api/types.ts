@@ -29,5 +29,6 @@ export interface Exercise {
   description: string
   equipment: Equipment
   difficulty: Difficulty
+  videoUrl: string | null
   targetedMuscles: TargetedMuscle[]
 }

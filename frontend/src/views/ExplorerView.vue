@@ -44,6 +44,7 @@ watch(locale, () => {
         />
       </div>
       <ExercisePanel
+        id="explorer-panel"
         class="results glass animate-in"
         style="animation-delay: 0.16s"
         :muscle-name="store.selectedMuscle?.name ?? null"

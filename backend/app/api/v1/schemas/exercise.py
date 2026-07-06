@@ -24,4 +24,5 @@ class ExerciseRead(BaseModel):
     description: str
     equipment: Equipment
     difficulty: Difficulty
+    video_url: str | None = None
     targeted_muscles: list[TargetedMuscleRead]
