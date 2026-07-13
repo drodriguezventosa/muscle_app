@@ -9,7 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 // Extract the YouTube video id from a watch/share URL.
 const videoId = computed(() => {
@@ -18,8 +18,12 @@ const videoId = computed(() => {
 })
 
 // Privacy-friendly embed, autoplaying since the user explicitly opened it.
+// Force captions in the UI language so a video in the "other" language still
+// shows subtitles the user can follow (cc_lang_pref + cc_load_policy).
 const embedSrc = computed(
-  () => `https://www.youtube-nocookie.com/embed/${videoId.value}?autoplay=1&rel=0`,
+  () =>
+    `https://www.youtube-nocookie.com/embed/${videoId.value}` +
+    `?autoplay=1&rel=0&cc_load_policy=1&cc_lang_pref=${locale.value}&hl=${locale.value}`,
 )
 
 function onKeydown(event: KeyboardEvent): void {

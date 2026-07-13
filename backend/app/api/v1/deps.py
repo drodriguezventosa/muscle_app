@@ -12,10 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.use_cases.exercise_use_cases import GetExercise
 from app.application.use_cases.muscle_use_cases import (
     GetMuscle,
+    ListActiveMuscles,
     ListMuscleExercises,
     ListMuscles,
 )
 from app.application.use_cases.recommend_exercises import RecommendExercises
+from app.application.use_cases.workout_use_cases import GenerateWorkout
 from app.core.config import get_settings
 from app.infrastructure.ai.factory import build_embedding, build_llm
 from app.infrastructure.persistence.database import get_session
@@ -44,6 +46,10 @@ def provide_muscle(session: SessionDep, locale: LocaleDep) -> GetMuscle:
     return GetMuscle(SqlAlchemyMuscleRepository(session, locale))
 
 
+def provide_active_muscles(session: SessionDep, locale: LocaleDep) -> ListActiveMuscles:
+    return ListActiveMuscles(SqlAlchemyMuscleRepository(session, locale))
+
+
 def provide_muscle_exercises(session: SessionDep, locale: LocaleDep) -> ListMuscleExercises:
     return ListMuscleExercises(
         SqlAlchemyMuscleRepository(session, locale),
@@ -53,6 +59,14 @@ def provide_muscle_exercises(session: SessionDep, locale: LocaleDep) -> ListMusc
 
 def provide_exercise(session: SessionDep, locale: LocaleDep) -> GetExercise:
     return GetExercise(SqlAlchemyExerciseRepository(session, locale))
+
+
+def provide_generate_workout(session: SessionDep, locale: LocaleDep) -> GenerateWorkout:
+    return GenerateWorkout(
+        SqlAlchemyMuscleRepository(session, locale),
+        SqlAlchemyExerciseRepository(session, locale),
+        locale,
+    )
 
 
 def provide_recommend_exercises(session: SessionDep, locale: LocaleDep) -> RecommendExercises:

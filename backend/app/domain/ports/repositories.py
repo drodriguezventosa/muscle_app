@@ -26,6 +26,18 @@ class MuscleRepository(ABC):
     async def get_by_svg_id(self, svg_id: str) -> Muscle | None:
         """Return the muscle mapped to this SVG shape id, or None."""
 
+    @abstractmethod
+    async def list_with_matching_exercises(
+        self,
+        equipment: list[Equipment] | None = None,
+        difficulty: list[Difficulty] | None = None,
+    ) -> list[Muscle]:
+        """Return muscles that have at least one exercise matching the filters.
+
+        With no filters, returns every muscle that has any exercise. Used to
+        light up only the relevant regions on the body map.
+        """
+
 
 class ExerciseRepository(ABC):
     """Read access to the exercise catalog."""
@@ -35,8 +47,17 @@ class ExerciseRepository(ABC):
         """Return the exercise with this id, or None if it does not exist."""
 
     @abstractmethod
-    async def list_for_muscle(self, muscle_id: int) -> list[Exercise]:
-        """Return exercises that target the given muscle (primary or secondary)."""
+    async def list_for_muscle(
+        self,
+        muscle_id: int,
+        equipment: list[Equipment] | None = None,
+        difficulty: list[Difficulty] | None = None,
+    ) -> list[Exercise]:
+        """Return exercises that target the given muscle (primary or secondary).
+
+        Optional equipment/difficulty filters narrow the result; an empty or
+        None filter means "no restriction".
+        """
 
     @abstractmethod
     async def search_similar(

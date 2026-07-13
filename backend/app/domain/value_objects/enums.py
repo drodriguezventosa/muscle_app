@@ -44,3 +44,11 @@ class MuscleRole(StrEnum):
 
     PRIMARY = "primary"
     SECONDARY = "secondary"
+
+
+class Goal(StrEnum):
+    """Training goal a workout template is designed for."""
+
+    FAT_LOSS = "fat_loss"
+    HYPERTROPHY = "hypertrophy"
+    STRENGTH = "strength"

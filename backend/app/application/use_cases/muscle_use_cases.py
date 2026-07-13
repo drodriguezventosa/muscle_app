@@ -3,6 +3,7 @@
 from app.domain.entities.exercise import Exercise
 from app.domain.entities.muscle import Muscle
 from app.domain.ports.repositories import ExerciseRepository, MuscleRepository
+from app.domain.value_objects.enums import Difficulty, Equipment
 
 
 class ListMuscles:
@@ -13,6 +14,24 @@ class ListMuscles:
 
     async def execute(self) -> list[Muscle]:
         return await self._muscles.list_all()
+
+
+class ListActiveMuscles:
+    """Return muscles that have exercises matching the given filters.
+
+    The body map uses this to show only the regions worth clicking under the
+    current equipment/difficulty selection.
+    """
+
+    def __init__(self, muscles: MuscleRepository) -> None:
+        self._muscles = muscles
+
+    async def execute(
+        self,
+        equipment: list[Equipment] | None = None,
+        difficulty: list[Difficulty] | None = None,
+    ) -> list[Muscle]:
+        return await self._muscles.list_with_matching_exercises(equipment, difficulty)
 
 
 class GetMuscle:
@@ -36,8 +55,13 @@ class ListMuscleExercises:
         self._muscles = muscles
         self._exercises = exercises
 
-    async def execute(self, svg_id: str) -> list[Exercise] | None:
+    async def execute(
+        self,
+        svg_id: str,
+        equipment: list[Equipment] | None = None,
+        difficulty: list[Difficulty] | None = None,
+    ) -> list[Exercise] | None:
         muscle = await self._muscles.get_by_svg_id(svg_id)
         if muscle is None or muscle.id is None:
             return None
-        return await self._exercises.list_for_muscle(muscle.id)
+        return await self._exercises.list_for_muscle(muscle.id, equipment, difficulty)

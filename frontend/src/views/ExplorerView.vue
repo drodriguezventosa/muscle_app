@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 import BodyMap from '@/components/BodyMap.vue'
 import ExercisePanel from '@/components/ExercisePanel.vue'
+import FilterBar from '@/components/FilterBar.vue'
 import HealthDisclaimer from '@/components/HealthDisclaimer.vue'
 import { useExplorerStore } from '@/stores/explorer'
 
@@ -37,11 +38,16 @@ watch(locale, () => {
 
     <div class="layout">
       <div class="map glass animate-in" style="animation-delay: 0.08s">
-        <BodyMap
-          :muscles="store.muscles"
-          :selected="store.selectedSvgId"
-          @select="store.selectMuscle"
-        />
+        <FilterBar />
+        <div class="map-body">
+          <BodyMap
+            :muscles="store.muscles"
+            :selected="store.selectedSvgId"
+            :active-svg-ids="store.activeSvgIds"
+            :view="store.view"
+            @select="store.selectMuscle"
+          />
+        </div>
       </div>
       <ExercisePanel
         id="explorer-panel"
@@ -92,7 +98,29 @@ h1 {
   align-items: start;
 }
 .map {
+  /* Filters sit as a header inside the body card; the figure centres below. */
+  position: relative;
+  z-index: 2;
   display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: visible;
+}
+/* On desktop keep the body card in view while the exercise list scrolls, and
+   stretch both columns to the same height (driven by the exercise list). */
+@media (min-width: 820px) {
+  .layout {
+    align-items: stretch;
+  }
+  .map {
+    position: sticky;
+    top: var(--space-md);
+  }
+}
+.map-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
   justify-content: center;
   padding: var(--space-lg);
 }

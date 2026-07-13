@@ -9,5 +9,10 @@ export const router = createRouter({
       name: 'explorer',
       component: () => import('@/views/ExplorerView.vue'),
     },
+    {
+      path: '/workouts',
+      name: 'workouts',
+      component: () => import('@/views/WorkoutsView.vue'),
+    },
   ],
 })
