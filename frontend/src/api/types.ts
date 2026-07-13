@@ -23,6 +23,25 @@ export interface TargetedMuscle {
   role: MuscleRole
 }
 
+export type Goal = 'fat_loss' | 'hypertrophy' | 'strength'
+
+export interface WorkoutItem {
+  exercise: Exercise
+  sets: number
+  reps: string
+  restSeconds: number
+}
+
+export interface Workout {
+  goal: Goal
+  name: string
+  description: string
+  difficulty: Difficulty
+  bmi: number
+  bmiCategory: string
+  items: WorkoutItem[]
+}
+
 export interface Exercise {
   id: number
   name: string
@@ -30,5 +49,7 @@ export interface Exercise {
   equipment: Equipment
   difficulty: Difficulty
   videoUrl: string | null
+  // How-to steps shown when there is no video, so every exercise has an example.
+  steps: string[]
   targetedMuscles: TargetedMuscle[]
 }

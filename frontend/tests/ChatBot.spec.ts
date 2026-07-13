@@ -11,6 +11,7 @@ const exercise: Exercise = {
   equipment: 'bodyweight',
   difficulty: 'beginner',
   videoUrl: 'https://www.youtube.com/watch?v=WDIpL0pjun0',
+  steps: [],
   targetedMuscles: [{ muscleId: 5, role: 'primary' }],
 }
 

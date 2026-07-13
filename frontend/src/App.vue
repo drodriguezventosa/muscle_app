@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { RouterLink, RouterView } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 import ChatWidget from '@/components/ChatWidget.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -11,6 +14,10 @@ import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
       <span class="logo" aria-hidden="true">◆</span>
       <span class="gradient-text">MuscleApp</span>
     </span>
+    <nav class="nav">
+      <RouterLink to="/">{{ t('nav.explorer') }}</RouterLink>
+      <RouterLink to="/workouts">{{ t('nav.workouts') }}</RouterLink>
+    </nav>
     <LanguageSwitcher />
   </header>
   <main class="app-main">
@@ -43,6 +50,30 @@ import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
   font-weight: 800;
   font-size: 1.15rem;
   letter-spacing: 0.02em;
+}
+.nav {
+  display: flex;
+  gap: var(--space-md);
+  margin-right: auto;
+  margin-left: var(--space-lg);
+}
+.nav a {
+  color: var(--color-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 4px 2px;
+  border-bottom: 2px solid transparent;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.nav a:hover {
+  color: var(--color-text);
+}
+.nav a.router-link-active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
 }
 .logo {
   color: var(--color-accent);

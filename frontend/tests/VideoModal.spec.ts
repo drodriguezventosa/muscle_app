@@ -13,6 +13,9 @@ describe('VideoModal', () => {
     const src = wrapper.get('iframe').attributes('src')
     expect(src).toContain('youtube-nocookie.com/embed/WDIpL0pjun0')
     expect(src).toContain('autoplay=1')
+    // Captions forced on in the UI language.
+    expect(src).toContain('cc_load_policy=1')
+    expect(src).toContain('cc_lang_pref=en')
   })
 
   it('emits close when the close button is clicked', async () => {

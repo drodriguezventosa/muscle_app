@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.muscle import Muscle
 from app.domain.ports.repositories import MuscleRepository
+from app.domain.value_objects.enums import Difficulty, Equipment
+from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
 from app.infrastructure.persistence.models.muscle import MuscleModel
 from app.infrastructure.persistence.repositories.localize import pick
 
@@ -37,3 +39,21 @@ class SqlAlchemyMuscleRepository(MuscleRepository):
         )
         model = result.first()
         return self._to_entity(model) if model else None
+
+    async def list_with_matching_exercises(
+        self,
+        equipment: list[Equipment] | None = None,
+        difficulty: list[Difficulty] | None = None,
+    ) -> list[Muscle]:
+        stmt = (
+            select(MuscleModel)
+            .join(ExerciseMuscleModel, ExerciseMuscleModel.muscle_id == MuscleModel.id)
+            .join(ExerciseModel, ExerciseModel.id == ExerciseMuscleModel.exercise_id)
+        )
+        if equipment:
+            stmt = stmt.where(ExerciseModel.equipment.in_(equipment))
+        if difficulty:
+            stmt = stmt.where(ExerciseModel.difficulty.in_(difficulty))
+        stmt = stmt.distinct().order_by(MuscleModel.name)
+        result = await self._session.scalars(stmt)
+        return [self._to_entity(m) for m in result]

@@ -14,6 +14,7 @@ const exercise: Exercise = {
   equipment: 'bodyweight',
   difficulty: 'beginner',
   videoUrl: 'https://www.youtube.com/watch?v=WDIpL0pjun0',
+  steps: [],
   targetedMuscles: [],
 }
 
@@ -27,6 +28,33 @@ describe('ExercisePanel', () => {
     await wrapper.get('.watch').trigger('click')
     expect(wrapper.find('[role="dialog"]').exists()).toBe(true)
     expect(wrapper.find('iframe').exists()).toBe(true)
+  })
+
+  it('shows steps in a collapsible when the exercise also has a video', () => {
+    const withBoth: Exercise = { ...exercise, steps: ['Paso uno', 'Paso dos'] }
+    const wrapper = mount(ExercisePanel, {
+      props: { muscleName: 'Pecho', exercises: [withBoth], loading: false, error: null },
+      global: { plugins: [i18n], stubs: { teleport: true } },
+    })
+    expect(wrapper.find('.watch').exists()).toBe(true)
+    const details = wrapper.find('details.steps-toggle')
+    expect(details.exists()).toBe(true)
+    expect(details.findAll('.steps-list li')).toHaveLength(2)
+  })
+
+  it('shows how-to steps when the exercise has no video', () => {
+    const stepped: Exercise = {
+      ...exercise,
+      videoUrl: null,
+      steps: ['Paso uno', 'Paso dos', 'Paso tres'],
+    }
+    const wrapper = mount(ExercisePanel, {
+      props: { muscleName: 'Pecho', exercises: [stepped], loading: false, error: null },
+      global: { plugins: [i18n], stubs: { teleport: true } },
+    })
+    expect(wrapper.find('.watch').exists()).toBe(false)
+    const items = wrapper.findAll('.steps-list li')
+    expect(items.map((i) => i.text())).toEqual(['Paso uno', 'Paso dos', 'Paso tres'])
   })
 
   // Regression guard: the decorative `.card::before` gradient overlay is

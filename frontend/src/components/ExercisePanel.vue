@@ -37,14 +37,27 @@ const activeVideo = ref<{ url: string; title: string } | null>(null)
           </div>
         </div>
         <p class="card-desc">{{ exercise.description }}</p>
-        <button
-          v-if="exercise.videoUrl"
-          class="watch"
-          type="button"
-          @click="activeVideo = { url: exercise.videoUrl, title: exercise.name }"
-        >
-          <span class="play" aria-hidden="true">▶</span> {{ t('video.watch') }}
-        </button>
+        <template v-if="exercise.videoUrl">
+          <button
+            class="watch"
+            type="button"
+            @click="activeVideo = { url: exercise.videoUrl, title: exercise.name }"
+          >
+            <span class="play" aria-hidden="true">▶</span> {{ t('video.watch') }}
+          </button>
+          <details v-if="exercise.steps.length" class="steps-toggle">
+            <summary>{{ t('panel.steps') }}</summary>
+            <ol class="steps-list">
+              <li v-for="(step, i) in exercise.steps" :key="i">{{ step }}</li>
+            </ol>
+          </details>
+        </template>
+        <div v-else-if="exercise.steps.length" class="steps">
+          <p class="steps-title">{{ t('panel.steps') }}</p>
+          <ol class="steps-list">
+            <li v-for="(step, i) in exercise.steps" :key="i">{{ step }}</li>
+          </ol>
+        </div>
       </li>
     </ul>
 
@@ -82,6 +95,20 @@ const activeVideo = ref<{ url: string; title: string } | null>(null)
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  /* Scroll the cards internally so a long list doesn't stretch the page.
+     This height is the reference the body card matches on desktop. */
+  max-height: min(62vh, 620px);
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.list::-webkit-scrollbar {
+  width: 6px;
+}
+.list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
 }
 .card {
   position: relative;
@@ -196,5 +223,58 @@ const activeVideo = ref<{ url: string; title: string } | null>(null)
   background: var(--gradient);
   color: #06121a;
   font-size: 0.6rem;
+}
+.steps {
+  margin-top: var(--space-sm);
+}
+.steps-toggle {
+  margin-top: var(--space-sm);
+}
+.steps-toggle summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.steps-toggle summary::-webkit-details-marker {
+  display: none;
+}
+.steps-toggle summary::before {
+  content: '▸';
+  transition: transform 0.15s ease;
+}
+.steps-toggle[open] summary::before {
+  transform: rotate(90deg);
+}
+.steps-toggle .steps-list {
+  margin-top: var(--space-xs);
+}
+.steps-title {
+  margin: 0 0 var(--space-xs);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+}
+.steps-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+.steps-list li {
+  padding-left: 2px;
+}
+.steps-list li::marker {
+  color: var(--color-accent);
+  font-weight: 700;
 }
 </style>
