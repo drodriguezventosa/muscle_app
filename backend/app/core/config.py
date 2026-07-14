@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     llm_model: str = "llama3.1"
     ollama_base_url: str = "http://ollama:11434"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-1.5-flash"
+    gemini_model: str = "gemini-2.5-flash"
 
     # ---- Embeddings ----
     # "fake" is deterministic and dependency-free (default); "gemini" uses Google's
