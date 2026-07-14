@@ -8,7 +8,7 @@ import VideoModal from '@/components/VideoModal.vue'
 import { useProgressStore } from '@/stores/progress'
 import { useWorkoutsStore, type Place } from '@/stores/workouts'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const store = useWorkoutsStore()
 const progress = useProgressStore()
 
@@ -43,6 +43,12 @@ watch(
     }
   },
 )
+
+// Re-generate the routine in the new language when the locale changes, so its
+// name/description and exercises are localized (the generator sends `?lang=`).
+watch(locale, () => {
+  if (store.result) void store.generate()
+})
 </script>
 
 <template>
