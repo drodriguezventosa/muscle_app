@@ -4,6 +4,8 @@ StubLLM needs no external service (zero-setup default). OllamaLLM and GeminiLLM
 call out over HTTP and are selected via configuration.
 """
 
+from typing import Any
+
 import httpx
 
 from app.domain.ports.ai import LLMPort
@@ -52,6 +54,10 @@ class GeminiLLM(LLMPort):
     """Google Gemini via its free-tier REST API."""
 
     _ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
+    _FALLBACK = (
+        "Aquí tienes ejercicios que encajan con tu consulta; revisa la lista y "
+        "elige según tu material y nivel."
+    )
 
     def __init__(self, api_key: str, model: str) -> None:
         self._api_key = api_key
@@ -67,4 +73,19 @@ class GeminiLLM(LLMPort):
             response = await client.post(url, params={"key": self._api_key}, json=payload)
             response.raise_for_status()
             data = response.json()
-        return str(data["candidates"][0]["content"]["parts"][0]["text"]).strip()
+        return self._extract_text(data) or self._FALLBACK
+
+    @staticmethod
+    def _extract_text(data: dict[str, Any]) -> str:
+        """Concatenate the text parts of the first candidate, tolerantly.
+
+        Some models (e.g. gemini-2.5 with thinking) return several parts or omit
+        `parts` entirely on safety/length stops; skip non-text parts and never
+        raise, so a valid HTTP response can't turn into a 500 downstream.
+        """
+        candidates = data.get("candidates") or []
+        if not candidates:
+            return ""
+        parts = candidates[0].get("content", {}).get("parts") or []
+        texts = [p["text"] for p in parts if isinstance(p, dict) and isinstance(p.get("text"), str)]
+        return "".join(texts).strip()

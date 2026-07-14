@@ -6,7 +6,11 @@ import httpx
 import pytest
 
 from app.infrastructure.ai.embeddings import FakeEmbedding, GeminiEmbedding
-from app.infrastructure.ai.llm import StubLLM
+from app.infrastructure.ai.llm import GeminiLLM, StubLLM
+
+
+def _gemini_reply(payload: dict) -> "httpx.Response":
+    return httpx.Response(200, json=payload, request=httpx.Request("POST", "https://x/gen"))
 
 
 async def test_fake_embedding_is_sized_deterministic_and_normalized() -> None:
@@ -32,6 +36,36 @@ async def test_stub_llm_returns_non_empty_text() -> None:
     reply = await StubLLM().generate("system", "user")
     assert isinstance(reply, str)
     assert reply.strip()
+
+
+async def test_gemini_llm_returns_text_and_skips_thought_parts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A gemini-2.5-style response with a thought part before the real text.
+    payload = {
+        "candidates": [{"content": {"parts": [{"thought": True}, {"text": "Haz flexiones."}]}}]
+    }
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        return _gemini_reply(payload)
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    reply = await GeminiLLM("k", "gemini-2.0-flash").generate("sys", "user")
+    assert reply == "Haz flexiones."
+
+
+async def test_gemini_llm_falls_back_when_no_text_part(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # e.g. finishReason MAX_TOKENS: a candidate with no usable text parts.
+    payload = {"candidates": [{"content": {}}]}
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        return _gemini_reply(payload)
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    reply = await GeminiLLM("k", "gemini-2.0-flash").generate("sys", "user")
+    assert reply == GeminiLLM._FALLBACK  # no 500, graceful degradation
 
 
 async def test_gemini_embedding_single_normalizes_and_hits_embedcontent(

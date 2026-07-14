@@ -53,7 +53,9 @@ class Settings(BaseSettings):
     llm_model: str = "llama3.1"
     ollama_base_url: str = "http://ollama:11434"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    # gemini-2.0-flash: GA, free tier, no "thinking" → a stable single-text
+    # response, unlike 2.5-flash whose thinking parts break naive parsing.
+    gemini_model: str = "gemini-2.0-flash"
 
     # ---- Embeddings ----
     # "fake" is deterministic and dependency-free (default); "gemini" uses Google's
