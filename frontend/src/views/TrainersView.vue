@@ -2,11 +2,14 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import CheckoutModal from '@/components/CheckoutModal.vue'
 import { ASSIGNABLE, STUDENTS, TRAINERS, type Student, type Trainer } from '@/data/coaching'
 import { useCoachingStore } from '@/stores/coaching'
+import { useSubscriptionsStore } from '@/stores/subscriptions'
 
 const { t } = useI18n()
 const coaching = useCoachingStore()
+const subs = useSubscriptionsStore()
 
 const tab = ref<'hire' | 'coach'>('hire')
 const hiring = ref<Trainer | null>(null)
@@ -45,7 +48,15 @@ const selected = ref<Student | null>(null)
         <p class="price">
           {{ tr.pricePerMonth }} € <span>{{ t('trainers.perMonth') }}</span>
         </p>
-        <button type="button" class="hire" @click="hiring = tr">{{ t('trainers.hire') }}</button>
+        <template v-if="subs.isActive(tr.id)">
+          <p class="active-badge">✓ {{ t('trainers.active') }}</p>
+          <button type="button" class="cancel" @click="subs.cancel(tr.id)">
+            {{ t('trainers.cancel') }}
+          </button>
+        </template>
+        <button v-else type="button" class="hire" @click="hiring = tr">
+          {{ t('trainers.hire') }}
+        </button>
       </li>
     </ul>
 
@@ -108,26 +119,8 @@ const selected = ref<Student | null>(null)
       </div>
     </div>
 
-    <!-- Hire (demo) modal -->
-    <Teleport to="body">
-      <div
-        v-if="hiring"
-        class="overlay"
-        role="dialog"
-        aria-modal="true"
-        @click.self="hiring = null"
-      >
-        <div class="modal glass">
-          <h2>{{ t('trainers.hireDemoTitle') }}</h2>
-          <p>
-            {{ t('trainers.hireDemoBody', { name: hiring.name, price: hiring.pricePerMonth }) }}
-          </p>
-          <button type="button" class="hire" @click="hiring = null">
-            {{ t('trainers.close') }}
-          </button>
-        </div>
-      </div>
-    </Teleport>
+    <!-- Hire flow: simulated payment gateway (no real charge) -->
+    <CheckoutModal v-if="hiring" :trainer="hiring" @close="hiring = null" />
   </section>
 </template>
 
@@ -263,6 +256,26 @@ h1 {
   font-weight: 700;
   cursor: pointer;
 }
+.active-badge {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-accent);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.cancel {
+  padding: 6px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cancel:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
 .coach {
   display: grid;
   grid-template-columns: 1fr;
@@ -370,34 +383,5 @@ h1 {
   margin: var(--space-sm) 0 0;
   color: var(--color-muted);
   font-size: 0.82rem;
-}
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-md);
-  background: rgba(4, 7, 15, 0.72);
-  backdrop-filter: blur(6px);
-}
-.modal {
-  max-width: 420px;
-  padding: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  text-align: center;
-}
-.modal h2 {
-  margin: 0;
-}
-.modal p {
-  margin: 0;
-  color: var(--color-muted);
-}
-.modal .hire {
-  align-self: center;
 }
 </style>
