@@ -21,3 +21,4 @@ sequentially; supersede rather than edit past decisions.
 | [0012](0012-trainers-preview-mockup.md) | Trainers/coaching as a frontend preview mockup | accepted |
 | [0013](0013-light-dark-theme.md) | Light/dark theme via CSS token overrides | accepted |
 | [0014](0014-continuous-deployment.md) | Continuous deployment on merge to main | accepted |
+| [0015](0015-performance-caching-and-keepalive.md) | Performance & resilience on free tiers: keep-alive + caching | accepted |
