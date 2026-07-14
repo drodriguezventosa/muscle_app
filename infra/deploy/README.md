@@ -43,6 +43,20 @@ workflow or CI tokens needed.
 2. Add env var `VITE_API_BASE_URL = https://<your-render-service>.onrender.com/api/v1`.
 3. Deploy → note the URL, and set it as `CORS_ORIGINS` on Render (step 3).
 
+## Performance & resilience (optional — see ADR-0015)
+Free-tier cold starts and repeated work are mitigated by three measures:
+
+- **Keep-alive** (`.github/workflows/keep-alive.yml`): pings `/health` every ~10 min
+  so Render never idles into a cold start. Active automatically once on `main`; no
+  setup. Optional: `gh variable set BACKEND_URL "https://<service>.onrender.com"` if
+  the URL differs. (A stricter cadence: a free monitor like UptimeRobot / cron-job.org.)
+- **Catalog caching**: HTTP `Cache-Control` + a localStorage stale-while-revalidate in
+  the explorer. Fully automatic; nothing to set.
+- **Redis cache (optional)**: caches query embeddings. Works out of the box with an
+  in-memory cache. For a persistent/shared cache, create a free **Upstash** Redis
+  (upstash.com, no card) and set `REDIS_URL=rediss://…` on Render. If unset,
+  `CACHE_PROVIDER=redis` safely falls back to in-memory.
+
 ## After setup
 Every push to `main`: Vercel redeploys the frontend and Render redeploys the backend
 (which re-bootstraps the DB idempotently). No manual steps, no CI secrets.
@@ -52,4 +66,5 @@ Every push to `main`: Vercel redeploys the frontend and Render redeploys the bac
 - [ ] Render Blueprint deployed; `DB_SSL=true`; `GEMINI_API_KEY` + `GROQ_API_KEY` set; `CORS_ORIGINS` = the Vercel origin.
 - [ ] `VITE_API_BASE_URL` set in Vercel = the Render `/api/v1` URL.
 - [ ] First deploy green; `/health` returns OK; explorer + chatbot work.
-- [ ] Note: Render free sleeps on inactivity; the first request after idle is slow.
+- [ ] Keep-alive workflow present on `main` (mitigates the cold start).
+- [ ] (Optional) `REDIS_URL` set on Render from a free Upstash Redis — else in-memory cache.
