@@ -20,7 +20,10 @@ from app.core.config import get_settings
 @lru_cache
 def get_engine() -> AsyncEngine:
     """Return a cached async engine built from application settings."""
-    return create_async_engine(get_settings().database_url, pool_pre_ping=True)
+    settings = get_settings()
+    # Managed Postgres (Neon, etc.) needs TLS; asyncpg enables it via connect_args.
+    connect_args = {"ssl": True} if settings.db_ssl else {}
+    return create_async_engine(settings.database_url, pool_pre_ping=True, connect_args=connect_args)
 
 
 @lru_cache
