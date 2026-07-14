@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import { getMuscleExercises, listActiveMuscles, listMuscles } from '@/api/explorer'
 import type { Difficulty, Equipment, Exercise, Muscle } from '@/api/types'
 import { i18n } from '@/i18n'
+import { readCache, writeCache } from '@/lib/localCache'
 
 // Which body figure(s) the map shows. Purely a view concern (front/back is a
 // property of the muscle's location, not of an exercise).
@@ -32,20 +33,36 @@ export const useExplorerStore = defineStore('explorer', () => {
   }
 
   async function refreshActive(): Promise<void> {
+    // Highlights are non-critical, so failures are swallowed (the map still
+    // renders). With no filters, serve the cached set instantly, then revalidate.
+    const noFilters = !equipment.value.length && !difficulty.value.length
+    const cacheKey = `active:${i18n.global.locale.value}`
+    if (noFilters) {
+      const cached = readCache<string[]>(cacheKey)
+      if (cached) activeSvgIds.value = cached
+    }
     try {
-      activeSvgIds.value = (await listActiveMuscles(filters())).map((m) => m.svgId)
+      const ids = (await listActiveMuscles(filters())).map((m) => m.svgId)
+      activeSvgIds.value = ids
+      if (noFilters) writeCache(cacheKey, ids)
     } catch {
-      error.value = i18n.global.t('errors.loadMuscles')
+      // keep whatever we have (cached or empty)
     }
   }
 
   async function loadMuscles(): Promise<void> {
     error.value = null
+    // Stale-while-revalidate: paint cached muscles instantly (per locale), then
+    // refresh. Only surface an error if we truly have nothing to show.
+    const cacheKey = `muscles:${i18n.global.locale.value}`
+    const cached = readCache<Muscle[]>(cacheKey)
+    if (cached?.length) muscles.value = cached
     try {
       muscles.value = await listMuscles()
+      writeCache(cacheKey, muscles.value)
       await refreshActive()
     } catch {
-      error.value = i18n.global.t('errors.loadMuscles')
+      if (!muscles.value.length) error.value = i18n.global.t('errors.loadMuscles')
     }
   }
 
