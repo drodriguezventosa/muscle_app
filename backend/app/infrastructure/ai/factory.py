@@ -7,7 +7,7 @@ from app.infrastructure.ai.embeddings import (
     GeminiEmbedding,
     SentenceTransformerEmbedding,
 )
-from app.infrastructure.ai.llm import GeminiLLM, OllamaLLM, StubLLM
+from app.infrastructure.ai.llm import GeminiLLM, GroqLLM, OllamaLLM, StubLLM
 
 
 def build_embedding(settings: Settings) -> EmbeddingPort:
@@ -25,4 +25,6 @@ def build_llm(settings: Settings) -> LLMPort:
         return OllamaLLM(settings.ollama_base_url, settings.llm_model)
     if settings.llm_provider == "gemini":
         return GeminiLLM(settings.gemini_api_key, settings.gemini_model)
+    if settings.llm_provider == "groq":
+        return GroqLLM(settings.groq_api_key, settings.groq_model)
     return StubLLM()

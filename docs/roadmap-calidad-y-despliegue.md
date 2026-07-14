@@ -42,8 +42,8 @@
 | Frontend | **Vercel Hobby** | Hosting del SPA. Sin tarjeta, no factura. Autodespliega en cada push. |
 | Base de datos | **Neon** (free) | Postgres + **pgvector**. Sin tarjeta; pausa si no se usa (no cobra). |
 | Backend (API) | **Render free** | Sin tarjeta, CD nativo desde GitHub. "Duerme" tras inactividad (arranque frío ~1 min). |
-| LLM del chatbot | **Gemini API free** (Google AI Studio) o *stub* | Free tier sin tarjeta, límites de sobra para un TFM. |
-| Embeddings | **Gemini embeddings** (API free) | Vectores reales sin `torch` (no cabría en los 512 MB de Render). |
+| LLM del chatbot | **Groq API free** (Llama 3.3 70B) o *stub* | Free tier generoso sin tarjeta. Se eligió sobre Gemini porque su cuota de *chat* gratis es demasiado baja (429). |
+| Embeddings | **Gemini embeddings** (API free) | Vectores reales sin `torch` (no cabría en los 512 MB de Render). Cuota aparte del chat. |
 
 **Contrapartidas asumidas:** arranque en frío de Render tras inactividad y límites de
 ritmo del LLM/embeddings gratis — irrelevantes para una demo de TFM.

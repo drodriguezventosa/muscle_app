@@ -27,7 +27,7 @@ services:
       - key: EMBEDDING_PROVIDER
         value: gemini
       - key: LLM_PROVIDER
-        value: gemini
+        value: groq
       # --- Set these in the Render dashboard (Environment); never committed ---
       - key: POSTGRES_HOST # from Neon
         sync: false
@@ -39,7 +39,9 @@ services:
         sync: false
       - key: POSTGRES_DB
         sync: false
-      - key: GEMINI_API_KEY # Google AI Studio (free)
+      - key: GEMINI_API_KEY # Google AI Studio (free) — used for embeddings
+        sync: false
+      - key: GROQ_API_KEY # console.groq.com (free, no card) — chat LLM
         sync: false
       - key: CORS_ORIGINS # your Vercel URL, e.g. https://muscleapp.vercel.app
         sync: false

@@ -9,8 +9,8 @@ workflow or CI tokens needed.
 | Frontend (SPA) | **Vercel** (Hobby) | Vercel's native GitHub integration, on every push |
 | Backend (API) | **Render** (free web service) | `render.yaml` Blueprint; Render rebuilds on every push (`autoDeploy`) |
 | Database | **Neon** (Postgres + pgvector) | schema + catalog bootstrapped by the backend on boot |
-| LLM | **Gemini** free API | `LLM_PROVIDER=gemini` + `GEMINI_API_KEY` on Render |
-| Embeddings | **Gemini** free API | `EMBEDDING_PROVIDER=gemini` (no torch → fits Render's 512 MB) |
+| Chat LLM | **Groq** free API | `LLM_PROVIDER=groq` + `GROQ_API_KEY` (Gemini's free chat quota is too low) |
+| Embeddings | **Gemini** free API | `EMBEDDING_PROVIDER=gemini` + `GEMINI_API_KEY` (no torch → fits Render's 512 MB) |
 
 > Why not Hugging Face? HF now gates **Docker** Spaces behind the paid Pro plan,
 > which breaks the no-card rule — so the backend lives on Render instead.
@@ -22,9 +22,9 @@ workflow or CI tokens needed.
    database, user, password, port.
 2. pgvector + the schema are created automatically by the backend on first boot.
 
-### 2. Gemini key
-Create a free API key at [Google AI Studio](https://aistudio.google.com/apikey) (no card).
-Used for **both** chat and embeddings.
+### 2. API keys (both free, no card)
+- **Gemini** (embeddings): create a key at [Google AI Studio](https://aistudio.google.com/apikey).
+- **Groq** (chat LLM): create a key at [console.groq.com/keys](https://console.groq.com/keys).
 
 ### 3. Render (backend)
 1. Sign up at [render.com](https://render.com) with GitHub (no card).
@@ -32,10 +32,10 @@ Used for **both** chat and embeddings.
    `muscleapp-api` web service.
 3. Fill the env vars marked "set in dashboard" (they are `sync: false` in the
    Blueprint, so nothing secret is committed):
-   `POSTGRES_HOST/PORT/USER/PASSWORD/DB` (from Neon), `GEMINI_API_KEY`, and
-   `CORS_ORIGINS` (your Vercel URL — fill after step 4).
+   `POSTGRES_HOST/PORT/USER/PASSWORD/DB` (from Neon), `GEMINI_API_KEY`,
+   `GROQ_API_KEY`, and `CORS_ORIGINS` (your Vercel URL — fill after step 4).
    The rest (`APP_ENV`, `DB_SSL=true`, `EMBEDDING_PROVIDER=gemini`,
-   `LLM_PROVIDER=gemini`) come from `render.yaml`.
+   `LLM_PROVIDER=groq`) come from `render.yaml`.
 4. Deploy → note the service URL, e.g. `https://muscleapp-api.onrender.com`.
 
 ### 4. Vercel (frontend)
@@ -49,7 +49,7 @@ Every push to `main`: Vercel redeploys the frontend and Render redeploys the bac
 
 ## Checklist
 - [ ] Neon project created; pgvector allowed (auto `CREATE EXTENSION`).
-- [ ] Render Blueprint deployed; `DB_SSL=true`; `GEMINI_API_KEY` set; `CORS_ORIGINS` = the Vercel origin.
+- [ ] Render Blueprint deployed; `DB_SSL=true`; `GEMINI_API_KEY` + `GROQ_API_KEY` set; `CORS_ORIGINS` = the Vercel origin.
 - [ ] `VITE_API_BASE_URL` set in Vercel = the Render `/api/v1` URL.
 - [ ] First deploy green; `/health` returns OK; explorer + chatbot work.
 - [ ] Note: Render free sleeps on inactivity; the first request after idle is slow.
