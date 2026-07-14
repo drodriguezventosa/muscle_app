@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 import ChatWidget from '@/components/ChatWidget.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const { t } = useI18n()
 </script>
@@ -17,7 +18,10 @@ const { t } = useI18n()
     <nav class="nav">
       <RouterLink to="/">{{ t('nav.explorer') }}</RouterLink>
       <RouterLink to="/workouts">{{ t('nav.workouts') }}</RouterLink>
+      <RouterLink to="/progress">{{ t('nav.progress') }}</RouterLink>
+      <RouterLink to="/trainers">{{ t('nav.trainers') }}</RouterLink>
     </nav>
+    <ThemeToggle />
     <LanguageSwitcher />
   </header>
   <main class="app-main">
@@ -38,7 +42,7 @@ const { t } = useI18n()
   justify-content: space-between;
   gap: var(--space-md);
   padding: var(--space-md) var(--space-lg);
-  background: rgba(7, 11, 22, 0.6);
+  background: var(--color-header);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(var(--blur));
   -webkit-backdrop-filter: blur(var(--blur));

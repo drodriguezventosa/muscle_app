@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import type { Difficulty, Goal } from '@/api/types'
+import type { Difficulty, Goal, WorkoutItem } from '@/api/types'
 import HealthDisclaimer from '@/components/HealthDisclaimer.vue'
 import VideoModal from '@/components/VideoModal.vue'
+import { useProgressStore } from '@/stores/progress'
 import { useWorkoutsStore, type Place } from '@/stores/workouts'
 
 const { t } = useI18n()
 const store = useWorkoutsStore()
+const progress = useProgressStore()
 
 const GOALS: Goal[] = ['fat_loss', 'hypertrophy', 'strength']
 const LEVELS: Difficulty[] = ['beginner', 'intermediate', 'advanced']
@@ -16,9 +18,31 @@ const PLACES: Place[] = ['gym', 'home']
 
 const activeVideo = ref<{ url: string; title: string } | null>(null)
 
+// Per-exercise input state for logging a session.
+const weightInput = reactive<Record<number, number | null>>({})
+const allSetsDone = reactive<Record<number, boolean>>({})
+
 function fmtRest(seconds: number): string {
   return seconds >= 60 ? `${Math.round(seconds / 60)} min` : `${seconds}s`
 }
+
+function logItem(item: WorkoutItem): void {
+  const id = item.exercise.id
+  const weight = weightInput[id] ?? progress.suggested(id)
+  if (weight == null || weight < 0) return
+  progress.log(id, item.exercise.name, weight, allSetsDone[id] ?? true)
+  weightInput[id] = null
+}
+
+// Default the "all sets" checkbox to checked for each exercise in a new routine.
+watch(
+  () => store.result,
+  (result) => {
+    for (const item of result?.items ?? []) {
+      if (allSetsDone[item.exercise.id] === undefined) allSetsDone[item.exercise.id] = true
+    }
+  },
+)
 </script>
 
 <template>
@@ -146,6 +170,42 @@ function fmtRest(seconds: number): string {
               {{ item.sets }} × {{ item.reps }} · {{ t('workouts.result.rest') }}
               {{ fmtRest(item.restSeconds) }}
             </p>
+            <div class="log">
+              <input
+                class="log-weight"
+                type="number"
+                min="0"
+                step="0.5"
+                inputmode="decimal"
+                :aria-label="t('progress.weight')"
+                :placeholder="
+                  progress.suggested(item.exercise.id) != null
+                    ? String(progress.suggested(item.exercise.id))
+                    : t('progress.weight')
+                "
+                v-model.number="weightInput[item.exercise.id]"
+              />
+              <span class="kg">kg</span>
+              <label class="done">
+                <input type="checkbox" v-model="allSetsDone[item.exercise.id]" />
+                {{ t('progress.allSets') }}
+              </label>
+              <button type="button" class="log-btn" @click="logItem(item)">
+                {{ t('progress.log') }}
+              </button>
+              <span v-if="progress.last(item.exercise.id)" class="last">
+                {{ t('progress.last') }} {{ progress.last(item.exercise.id)?.weight }} kg ·
+                {{ t('progress.best') }} {{ progress.best(item.exercise.id) }} kg
+                <span
+                  v-if="
+                    progress.best(item.exercise.id) > 0 &&
+                    progress.last(item.exercise.id)?.weight === progress.best(item.exercise.id)
+                  "
+                  aria-hidden="true"
+                  >⭐</span
+                >
+              </span>
+            </div>
           </div>
           <button
             v-if="item.exercise.videoUrl"
@@ -258,7 +318,7 @@ h1 {
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-input);
   color: var(--color-text);
   font: inherit;
 }
@@ -340,7 +400,7 @@ h1 {
 }
 .item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
   background: var(--color-surface-strong);
@@ -386,6 +446,54 @@ h1 {
   margin: 2px 0 0;
   color: var(--color-muted);
   font-size: 0.88rem;
+}
+.log {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+  font-size: 0.82rem;
+}
+.log-weight {
+  width: 72px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-input);
+  color: var(--color-text);
+  font: inherit;
+}
+.log-weight:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.kg {
+  color: var(--color-muted);
+  margin-right: var(--space-xs);
+}
+.done {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.log-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.log-btn:hover {
+  background: var(--color-accent-soft);
+}
+.last {
+  color: var(--color-muted);
 }
 .watch {
   display: inline-flex;

@@ -14,5 +14,15 @@ export const router = createRouter({
       name: 'workouts',
       component: () => import('@/views/WorkoutsView.vue'),
     },
+    {
+      path: '/progress',
+      name: 'progress',
+      component: () => import('@/views/ProgressView.vue'),
+    },
+    {
+      path: '/trainers',
+      name: 'trainers',
+      component: () => import('@/views/TrainersView.vue'),
+    },
   ],
 })
