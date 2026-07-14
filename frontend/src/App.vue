@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import ChatWidget from '@/components/ChatWidget.vue'
@@ -7,6 +8,22 @@ import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const { t } = useI18n()
+const route = useRoute()
+
+// Mobile navigation menu (hamburger). Hidden on desktop via CSS.
+const menuOpen = ref(false)
+
+// Close the menu after navigating (covers link taps, including the active one).
+watch(
+  () => route.path,
+  () => (menuOpen.value = false),
+)
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') menuOpen.value = false
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
@@ -15,7 +32,7 @@ const { t } = useI18n()
       <span class="logo" aria-hidden="true">◆</span>
       <span class="gradient-text">MuscleApp</span>
     </span>
-    <nav class="nav">
+    <nav id="primary-nav" class="nav" :class="{ 'nav--open': menuOpen }" @click="menuOpen = false">
       <RouterLink to="/">{{ t('nav.explorer') }}</RouterLink>
       <RouterLink to="/workouts">{{ t('nav.workouts') }}</RouterLink>
       <RouterLink to="/progress">{{ t('nav.progress') }}</RouterLink>
@@ -23,6 +40,16 @@ const { t } = useI18n()
     </nav>
     <ThemeToggle />
     <LanguageSwitcher />
+    <button
+      class="nav-toggle"
+      type="button"
+      :aria-label="t('nav.menu')"
+      :aria-expanded="menuOpen"
+      aria-controls="primary-nav"
+      @click="menuOpen = !menuOpen"
+    >
+      <span aria-hidden="true">{{ menuOpen ? '✕' : '☰' }}</span>
+    </button>
   </header>
   <main class="app-main">
     <RouterView />
@@ -89,9 +116,71 @@ const { t } = useI18n()
     transform: rotate(360deg);
   }
 }
+/* Hamburger button: hidden on desktop, shown on mobile. */
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.nav-toggle:hover {
+  border-color: var(--color-accent);
+}
 .app-main {
   max-width: 1040px;
   margin: 0 auto;
   padding: var(--space-lg);
+}
+
+/* Mobile / tablet portrait: collapse the nav behind a hamburger menu. */
+@media (max-width: 820px) {
+  .app-header {
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+  }
+  .brand {
+    margin-right: auto;
+    font-size: 1.05rem;
+  }
+  .nav-toggle {
+    display: inline-flex;
+  }
+  /* Dropdown panel below the header; the sticky header is its containing block. */
+  .nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    display: none;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: var(--space-sm);
+    background: var(--color-elevated);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+  }
+  .nav--open {
+    display: flex;
+  }
+  .nav a {
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: none;
+    border-radius: var(--radius-sm);
+  }
+  .nav a.router-link-active {
+    background: var(--color-accent-soft);
+  }
+  .app-main {
+    padding: var(--space-md);
+  }
 }
 </style>
