@@ -32,6 +32,7 @@ export default {
     workouts: 'Entrenamientos',
     progress: 'Progreso',
     trainers: 'Entrenadores',
+    menu: 'Menú',
   },
   trainers: {
     eyebrow: 'Entrenadores',

@@ -32,6 +32,7 @@ export default {
     workouts: 'Workouts',
     progress: 'Progress',
     trainers: 'Trainers',
+    menu: 'Menu',
   },
   trainers: {
     eyebrow: 'Trainers',
