@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     embedding_provider: Literal["fake", "gemini", "sentence_transformers"] = "fake"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     # Gemini embedding model (reuses `gemini_api_key`); truncated to embedding_dim.
-    gemini_embedding_model: str = "text-embedding-004"
+    gemini_embedding_model: str = "gemini-embedding-001"
     embedding_dim: int = 384
 
     # ---- Observability ----

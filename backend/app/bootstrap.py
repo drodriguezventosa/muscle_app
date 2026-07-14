@@ -26,7 +26,14 @@ async def bootstrap() -> None:
     async with get_session_factory()() as session:
         await seed(session)  # skips if already seeded
         # Fills null vectors only, using the configured embedding provider.
-        await backfill_embeddings(session, build_embedding(get_settings()))
+        # Non-fatal: an embedding-provider hiccup must not stop the API from
+        # serving (the explorer + filters work without vectors; semantic search
+        # degrades until the next successful backfill).
+        try:
+            count = await backfill_embeddings(session, build_embedding(get_settings()))
+            print(f"Backfilled embeddings for {count} exercises.")
+        except Exception as exc:  # noqa: BLE001 - log and keep serving
+            print(f"WARNING: embedding backfill skipped ({exc!r}); serving without vectors.")
 
 
 if __name__ == "__main__":

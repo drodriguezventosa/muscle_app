@@ -58,18 +58,22 @@ async def test_gemini_embedding_single_normalizes_and_hits_embedcontent(
     assert vector == [0.6, 0.8]  # L2-normalized (3,4) -> (0.6,0.8)
 
 
-async def test_gemini_embedding_many_uses_batch_endpoint(
+async def test_gemini_embedding_many_embeds_each_via_embedcontent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # gemini-embedding-001 has no synchronous batch method, so embed_many must
+    # call embedContent once per text and preserve input order.
+    raw = {"a": [1.0, 0.0], "b": [0.0, 2.0]}
+
     async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
-        assert url.endswith(":batchEmbedContents")
+        assert url.endswith(":embedContent")
+        json_body = kwargs["json"]
+        text = json_body["content"]["parts"][0]["text"]  # type: ignore[index]
         return httpx.Response(
-            200,
-            json={"embeddings": [{"values": [1.0, 0.0]}, {"values": [0.0, 2.0]}]},
-            request=httpx.Request("POST", url),
+            200, json={"embedding": {"values": raw[text]}}, request=httpx.Request("POST", url)
         )
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-    vectors = await GeminiEmbedding("k", "models/text-embedding-004", dim=2).embed_many(["a", "b"])
+    vectors = await GeminiEmbedding("k", "gemini-embedding-001", dim=2).embed_many(["a", "b"])
 
     assert vectors == [[1.0, 0.0], [0.0, 1.0]]  # each L2-normalized, order preserved

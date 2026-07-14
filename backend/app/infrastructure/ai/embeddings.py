@@ -60,45 +60,44 @@ class GeminiEmbedding(EmbeddingPort):
     vectors of `dim` (default 384), keeping the existing pgvector column size —
     no re-seed or schema change. Truncated vectors are not unit-length, so we
     L2-normalize them here for stable cosine similarity.
+
+    `gemini-embedding-001` exposes only the single `embedContent` method (no
+    synchronous batch), so `embed_many` embeds each text individually with
+    bounded concurrency to respect free-tier rate limits.
     """
 
     _ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
+    _MAX_CONCURRENCY = 5
 
     def __init__(self, api_key: str, model: str, dim: int) -> None:
         self._api_key = api_key
         self._model = model if model.startswith("models/") else f"models/{model}"
         self._dim = dim
 
-    async def embed(self, text: str) -> list[float]:
+    async def _embed_one(self, client: httpx.AsyncClient, text: str) -> list[float]:
         url = f"{self._ENDPOINT}/{self._model.split('/', 1)[1]}:embedContent"
         payload = {
             "model": self._model,
             "content": {"parts": [{"text": text}]},
             "outputDimensionality": self._dim,
         }
+        response = await client.post(url, params={"key": self._api_key}, json=payload)
+        response.raise_for_status()
+        return _normalize([float(x) for x in response.json()["embedding"]["values"]])
+
+    async def embed(self, text: str) -> list[float]:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            response = await client.post(url, params={"key": self._api_key}, json=payload)
-            response.raise_for_status()
-            data = response.json()
-        return _normalize([float(x) for x in data["embedding"]["values"]])
+            return await self._embed_one(client, text)
 
     async def embed_many(self, texts: list[str]) -> list[list[float]]:
-        url = f"{self._ENDPOINT}/{self._model.split('/', 1)[1]}:batchEmbedContents"
-        payload = {
-            "requests": [
-                {
-                    "model": self._model,
-                    "content": {"parts": [{"text": text}]},
-                    "outputDimensionality": self._dim,
-                }
-                for text in texts
-            ]
-        }
+        semaphore = asyncio.Semaphore(self._MAX_CONCURRENCY)
+
+        async def bounded(client: httpx.AsyncClient, text: str) -> list[float]:
+            async with semaphore:
+                return await self._embed_one(client, text)
+
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            response = await client.post(url, params={"key": self._api_key}, json=payload)
-            response.raise_for_status()
-            data = response.json()
-        return [_normalize([float(x) for x in item["values"]]) for item in data["embeddings"]]
+            return list(await asyncio.gather(*(bounded(client, text) for text in texts)))
 
 
 class SentenceTransformerEmbedding(EmbeddingPort):
