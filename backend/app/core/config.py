@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+from sqlalchemy import URL
 
 
 class Settings(BaseSettings):
@@ -70,11 +71,20 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def database_url(self) -> str:
-        """Async SQLAlchemy DSN built from the discrete Postgres settings."""
-        return (
-            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
-            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-        )
+        """Async SQLAlchemy DSN from the discrete Postgres settings.
+
+        Built with `URL.create` so special characters in the password (@, /, :, …)
+        are percent-encoded correctly — managed providers like Neon issue such
+        passwords.
+        """
+        return URL.create(
+            "postgresql+asyncpg",
+            username=self.postgres_user,
+            password=self.postgres_password,
+            host=self.postgres_host,
+            port=self.postgres_port,
+            database=self.postgres_db,
+        ).render_as_string(hide_password=False)
 
     @property
     def is_production(self) -> bool:
