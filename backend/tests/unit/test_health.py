@@ -15,6 +15,12 @@ def test_ready_returns_ready(client: TestClient) -> None:
     assert response.json() == {"status": "ready"}
 
 
+def test_health_accepts_head(client: TestClient) -> None:
+    # Uptime monitors ping with HEAD; it must return 200, not 405.
+    response = client.head("/health")
+    assert response.status_code == 200
+
+
 def test_security_headers_present(client: TestClient) -> None:
     response = client.get("/health")
     assert response.headers["X-Content-Type-Options"] == "nosniff"
