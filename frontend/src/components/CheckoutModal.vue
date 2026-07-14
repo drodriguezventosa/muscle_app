@@ -295,8 +295,11 @@ h2 {
   gap: 4px;
   font-size: 0.8rem;
   color: var(--color-muted);
+  min-width: 0; /* let grid/flex items shrink below the input's intrinsic size */
 }
 .card-form input {
+  width: 100%;
+  min-width: 0; /* otherwise the Expiry/CVC inputs overflow the modal on mobile */
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
