@@ -6,11 +6,19 @@ Aplicación web para explorar los músculos del cuerpo y descubrir qué ejercici
 
 ## Características (MVP)
 
-- 🗺️ **Explorador interactivo** del cuerpo humano (SVG) — sin necesidad de registro.
+- 🗺️ **Explorador interactivo** del cuerpo humano (SVG) con figura anatómica, popup por
+  grupo muscular y **filtros** (vista frente/espalda, material, nivel) — sin registro.
+- 🎬 Cada ejercicio con **vídeo de ejemplo** (subtítulos en tu idioma) o **pasos** paso a paso.
 - 🤖 **Chatbot** que recomienda ejercicios según tu objetivo, músculo y material disponible.
+- 🏋️ **Generador de rutinas** por objetivo (pérdida de grasa / hipertrofia / fuerza) a partir
+  de tus datos (altura, peso, nivel), con IMC.
+- 📈 **Progreso**: registra el peso por ejercicio y sigue tu evolución con sobrecarga
+  progresiva (guardado en tu dispositivo).
+- 👤 **Entrenadores** (vista previa): contratar un entrenador y panel para gestionar alumnos.
+- 🌗 **Modo claro/oscuro** y 🌍 **bilingüe** (ES/EN).
 - 🎨 Interfaz **moderna, minimalista y responsive**.
 
-_Auth, suscripciones y entrenadores personales están planificados como fase futura._
+_Auth, suscripciones y entrenadores personales (reales) están planificados como fase futura._
 
 ## Stack
 

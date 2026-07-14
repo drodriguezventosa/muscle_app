@@ -132,7 +132,7 @@ function onPick(value: string): void {
   padding: var(--space-xs);
   list-style: none;
   /* Opaque surface: a dropdown must not let content behind it show through. */
-  background: #0e1626;
+  background: var(--color-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);

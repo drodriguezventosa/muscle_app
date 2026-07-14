@@ -216,7 +216,7 @@ async function goToExercise(exercise: Exercise): Promise<void> {
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-input);
   color: var(--color-text);
   font: inherit;
 }

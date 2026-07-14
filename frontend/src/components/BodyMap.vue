@@ -276,7 +276,7 @@ onBeforeUnmount(() => {
   max-width: 560px;
 }
 .silhouette {
-  fill: rgba(255, 255, 255, 0.05);
+  fill: var(--color-surface-strong);
   stroke: var(--color-border);
   stroke-width: 1;
 }
@@ -326,7 +326,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: #0e1626;
+  background: var(--color-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
