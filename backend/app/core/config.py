@@ -48,14 +48,19 @@ class Settings(BaseSettings):
 
     # ---- LLM ----
     # "stub" needs no external service (deterministic reply) — the zero-setup
-    # default; switch to "ollama" (local, free) or "gemini" (free tier) via env.
-    llm_provider: Literal["stub", "ollama", "gemini"] = "stub"
+    # default; "ollama" (local, free), "gemini" (free tier), or "groq" (generous
+    # free tier, no card — used in deploy) are selected via env.
+    llm_provider: Literal["stub", "ollama", "gemini", "groq"] = "stub"
     llm_model: str = "llama3.1"
     ollama_base_url: str = "http://ollama:11434"
     gemini_api_key: str = ""
     # gemini-2.0-flash: GA, free tier, no "thinking" → a stable single-text
     # response, unlike 2.5-flash whose thinking parts break naive parsing.
     gemini_model: str = "gemini-2.0-flash"
+    # Groq: OpenAI-compatible free tier (no card). Chat LLM for deploy, because
+    # Gemini's free chat quota is too low (embeddings stay on Gemini).
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
 
     # ---- Embeddings ----
     # "fake" is deterministic and dependency-free (default); "gemini" uses Google's

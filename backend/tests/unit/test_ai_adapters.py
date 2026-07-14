@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from app.infrastructure.ai.embeddings import FakeEmbedding, GeminiEmbedding
-from app.infrastructure.ai.llm import GeminiLLM, StubLLM
+from app.infrastructure.ai.llm import _FALLBACK, GeminiLLM, GroqLLM, StubLLM
 
 
 def _gemini_reply(payload: dict) -> "httpx.Response":
@@ -65,7 +65,34 @@ async def test_gemini_llm_falls_back_when_no_text_part(
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
     reply = await GeminiLLM("k", "gemini-2.0-flash").generate("sys", "user")
-    assert reply == GeminiLLM._FALLBACK  # no 500, graceful degradation
+    assert reply == _FALLBACK  # no 500, graceful degradation
+
+
+async def test_groq_llm_returns_message_content(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        captured["url"] = url
+        captured["headers"] = kwargs.get("headers")
+        payload = {"choices": [{"message": {"content": "Prueba dominadas y remo. "}}]}
+        return httpx.Response(200, json=payload, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    reply = await GroqLLM("secret-key", "llama-3.3-70b-versatile").generate("sys", "user")
+
+    assert reply == "Prueba dominadas y remo."
+    assert captured["url"] == GroqLLM._ENDPOINT
+    assert captured["headers"] == {"Authorization": "Bearer secret-key"}  # type: ignore[comparison-overlap]
+
+
+async def test_groq_llm_falls_back_on_http_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    # e.g. free-tier 429: degrade to the fallback instead of raising a 500.
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        return httpx.Response(429, json={"error": "rate limit"}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    reply = await GroqLLM("k", "llama-3.3-70b-versatile").generate("sys", "user")
+    assert reply == _FALLBACK
 
 
 async def test_gemini_embedding_single_normalizes_and_hits_embedcontent(

@@ -19,10 +19,10 @@ exceed and that never auto-charge / require a card.
   or structured logs instead of hosted Sentry.
 - Deploy (target 0 €/mo, no card): frontend on Vercel Hobby / Cloudflare Pages;
   database on Neon (Postgres + pgvector, pauses instead of billing); backend on
-  **Render free** (chosen — no card, native GitHub CD); LLM via Gemini free API or
-  the stub; embeddings via the Gemini free API (torch does not fit Render's 512 MB).
-  **Avoid GCP Cloud Run** (requires a billing account + card) and **Hugging Face
-  Docker Spaces** (now gated behind the paid Pro plan).
+  **Render free** (chosen — no card, native GitHub CD); chat LLM via **Groq** free
+  tier (Gemini's free chat quota is too low — 429s); embeddings via the Gemini free
+  API (torch does not fit Render's 512 MB). **Avoid GCP Cloud Run** (requires a
+  billing account + card) and **Hugging Face Docker Spaces** (now gated behind Pro).
 
 ## Consequences
 
