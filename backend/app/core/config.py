@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     postgres_db: str = "muscle"
     postgres_host: str = "db"
     postgres_port: int = 5432
+    # Managed Postgres (e.g. Neon) requires TLS; enable it in production.
+    db_ssl: bool = False
 
     # ---- LLM ----
     # "stub" needs no external service (deterministic reply) — the zero-setup

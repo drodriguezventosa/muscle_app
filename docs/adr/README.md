@@ -20,3 +20,4 @@ sequentially; supersede rather than edit past decisions.
 | [0011](0011-client-side-workout-progress.md) | Client-side workout progress (localStorage) | accepted |
 | [0012](0012-trainers-preview-mockup.md) | Trainers/coaching as a frontend preview mockup | accepted |
 | [0013](0013-light-dark-theme.md) | Light/dark theme via CSS token overrides | accepted |
+| [0014](0014-continuous-deployment.md) | Continuous deployment on merge to main | accepted |
