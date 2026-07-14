@@ -2,10 +2,12 @@
 
 from app.application.use_cases.recommend_exercises import DISCLAIMER, RecommendExercises
 from app.domain.entities.exercise import Exercise
+from app.domain.ports.ai import EmbeddingPort
 from app.domain.ports.repositories import ExerciseRepository
 from app.domain.value_objects.enums import Difficulty, Equipment
 from app.infrastructure.ai.embeddings import FakeEmbedding
 from app.infrastructure.ai.llm import StubLLM
+from app.infrastructure.cache.memory import InMemoryCache
 
 EXERCISES = [
     Exercise(
@@ -61,6 +63,31 @@ async def test_empty_message_asks_for_input_and_returns_no_exercises() -> None:
     recommendation = await _use_case(RecordingExerciseRepository(EXERCISES)).execute("   ")
     assert recommendation.exercises == ()
     assert DISCLAIMER in recommendation.reply
+
+
+class CountingEmbedding(EmbeddingPort):
+    """Wraps FakeEmbedding and counts how many times a query is embedded."""
+
+    def __init__(self, dim: int) -> None:
+        self._inner = FakeEmbedding(dim)
+        self.calls = 0
+
+    async def embed(self, text: str) -> list[float]:
+        self.calls += 1
+        return await self._inner.embed(text)
+
+    async def embed_many(self, texts: list[str]) -> list[list[float]]:
+        return await self._inner.embed_many(texts)
+
+
+async def test_caches_query_embedding_across_calls() -> None:
+    embedding = CountingEmbedding(384)
+    use_case = RecommendExercises(
+        embedding, RecordingExerciseRepository(EXERCISES), StubLLM(), cache=InMemoryCache()
+    )
+    await use_case.execute("pecho en casa")
+    await use_case.execute("pecho en casa")  # same query → served from cache
+    assert embedding.calls == 1
 
 
 async def test_passes_filters_and_query_embedding_to_search() -> None:

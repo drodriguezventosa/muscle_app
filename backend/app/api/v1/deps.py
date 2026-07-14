@@ -4,6 +4,7 @@ Routers depend on these so they never construct infrastructure directly; tests
 can override `get_session` to point at a test database.
 """
 
+from functools import lru_cache
 from typing import Annotated, Literal
 
 from fastapi import Depends, Query
@@ -19,7 +20,9 @@ from app.application.use_cases.muscle_use_cases import (
 from app.application.use_cases.recommend_exercises import RecommendExercises
 from app.application.use_cases.workout_use_cases import GenerateWorkout
 from app.core.config import get_settings
+from app.domain.ports.cache import CachePort
 from app.infrastructure.ai.factory import build_embedding, build_llm
+from app.infrastructure.cache.factory import build_cache
 from app.infrastructure.persistence.database import get_session
 from app.infrastructure.persistence.repositories.exercise_repository import (
     SqlAlchemyExerciseRepository,
@@ -32,6 +35,12 @@ from app.infrastructure.persistence.repositories.muscle_repository import (
 def get_locale(lang: Literal["es", "en"] = Query("es")) -> str:
     """Requested content locale from the `lang` query param (default Spanish)."""
     return lang
+
+
+@lru_cache
+def get_cache() -> CachePort:
+    """Process-wide cache singleton (so an in-memory cache is shared across requests)."""
+    return build_cache(get_settings())
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -75,4 +84,6 @@ def provide_recommend_exercises(session: SessionDep, locale: LocaleDep) -> Recom
         build_embedding(settings),
         SqlAlchemyExerciseRepository(session, locale),
         build_llm(settings),
+        cache=get_cache(),
+        cache_ttl_seconds=settings.cache_ttl_seconds,
     )

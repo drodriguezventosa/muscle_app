@@ -72,6 +72,13 @@ class Settings(BaseSettings):
     gemini_embedding_model: str = "gemini-embedding-001"
     embedding_dim: int = 384
 
+    # ---- Cache ----
+    # "memory" is in-process and zero-setup (default); "redis" uses an external
+    # store (e.g. Upstash) via REDIS_URL. Falls back to memory if the URL is empty.
+    cache_provider: Literal["memory", "redis"] = "memory"
+    redis_url: str = ""
+    cache_ttl_seconds: int = 86400  # 1 day
+
     # ---- Observability ----
     sentry_dsn: str = ""
 
