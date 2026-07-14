@@ -2,7 +2,10 @@
 
 import math
 
-from app.infrastructure.ai.embeddings import FakeEmbedding
+import httpx
+import pytest
+
+from app.infrastructure.ai.embeddings import FakeEmbedding, GeminiEmbedding
 from app.infrastructure.ai.llm import StubLLM
 
 
@@ -29,3 +32,44 @@ async def test_stub_llm_returns_non_empty_text() -> None:
     reply = await StubLLM().generate("system", "user")
     assert isinstance(reply, str)
     assert reply.strip()
+
+
+async def test_gemini_embedding_single_normalizes_and_hits_embedcontent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        captured["url"] = url
+        captured["json"] = kwargs.get("json")
+        return httpx.Response(
+            200, json={"embedding": {"values": [3.0, 4.0]}}, request=httpx.Request("POST", url)
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    vector = await GeminiEmbedding("k", "text-embedding-004", dim=2).embed("chest at home")
+
+    assert str(captured["url"]).endswith("models/text-embedding-004:embedContent")
+    assert captured["json"] == {  # type: ignore[comparison-overlap]
+        "model": "models/text-embedding-004",
+        "content": {"parts": [{"text": "chest at home"}]},
+        "outputDimensionality": 2,
+    }
+    assert vector == [0.6, 0.8]  # L2-normalized (3,4) -> (0.6,0.8)
+
+
+async def test_gemini_embedding_many_uses_batch_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        assert url.endswith(":batchEmbedContents")
+        return httpx.Response(
+            200,
+            json={"embeddings": [{"values": [1.0, 0.0]}, {"values": [0.0, 2.0]}]},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    vectors = await GeminiEmbedding("k", "models/text-embedding-004", dim=2).embed_many(["a", "b"])
+
+    assert vectors == [[1.0, 0.0], [0.0, 1.0]]  # each L2-normalized, order preserved

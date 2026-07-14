@@ -56,10 +56,13 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-1.5-flash"
 
     # ---- Embeddings ----
-    # "fake" is deterministic and dependency-free (default); "sentence_transformers"
-    # gives real semantic vectors but requires the optional `.[ai]` extra (torch).
-    embedding_provider: Literal["fake", "sentence_transformers"] = "fake"
+    # "fake" is deterministic and dependency-free (default); "gemini" uses Google's
+    # free embedding API (real vectors, no local model — fits small free hosts);
+    # "sentence_transformers" gives real vectors but needs the `.[ai]` extra (torch).
+    embedding_provider: Literal["fake", "gemini", "sentence_transformers"] = "fake"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    # Gemini embedding model (reuses `gemini_api_key`); truncated to embedding_dim.
+    gemini_embedding_model: str = "text-embedding-004"
     embedding_dim: int = 384
 
     # ---- Observability ----

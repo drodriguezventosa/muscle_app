@@ -32,18 +32,21 @@
 
 ## Fase 7 — Despliegue (objetivo 0 €, sin tarjeta)
 
-> Se descarta **Cloud Run**: exige cuenta de facturación de GCP con tarjeta y puede cobrar.
+> Se descarta **Cloud Run** (exige cuenta de facturación de GCP con tarjeta) y
+> **Hugging Face Docker Spaces** (ahora requieren el plan de pago Pro).
+> **CD nativo**: tanto Vercel como Render autodesplegan en cada push a `main`
+> (sin workflow de GitHub Actions ni tokens). Config en `render.yaml` y `vercel.json`.
 
-| Parte | Opción gratis | Notas |
+| Parte | Opción gratis (elegida) | Notas |
 |---|---|---|
-| Frontend | **Vercel Hobby** o **Cloudflare Pages** | Hosting del SPA. Sin tarjeta, no factura. |
-| Base de datos | **Neon** (free) | Postgres + **pgvector**. Sin tarjeta; pausa si no se usa (no cobra). Alt: Supabase. |
-| Backend (API) | **Hugging Face Spaces (Docker)** o **Render free** | HF: sin tarjeta, ~16 GB RAM (aguanta modelo local). Render: más simple, "duerme" (arranque frío). |
+| Frontend | **Vercel Hobby** | Hosting del SPA. Sin tarjeta, no factura. Autodespliega en cada push. |
+| Base de datos | **Neon** (free) | Postgres + **pgvector**. Sin tarjeta; pausa si no se usa (no cobra). |
+| Backend (API) | **Render free** | Sin tarjeta, CD nativo desde GitHub. "Duerme" tras inactividad (arranque frío ~1 min). |
 | LLM del chatbot | **Gemini API free** (Google AI Studio) o *stub* | Free tier sin tarjeta, límites de sobra para un TFM. |
-| Embeddings | Local ligero o Gemini embeddings | Para no cargar el host. |
+| Embeddings | **Gemini embeddings** (API free) | Vectores reales sin `torch` (no cabría en los 512 MB de Render). |
 
-**Contrapartidas asumidas:** arranques en frío (si el host duerme) y límites de ritmo del
-LLM gratis — irrelevantes para una demo de TFM.
+**Contrapartidas asumidas:** arranque en frío de Render tras inactividad y límites de
+ritmo del LLM/embeddings gratis — irrelevantes para una demo de TFM.
 
 ## Ideas de producto
 
