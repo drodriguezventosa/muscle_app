@@ -2,13 +2,21 @@
 
 from app.core.config import Settings
 from app.domain.ports.ai import EmbeddingPort, LLMPort
-from app.infrastructure.ai.embeddings import FakeEmbedding, SentenceTransformerEmbedding
+from app.infrastructure.ai.embeddings import (
+    FakeEmbedding,
+    GeminiEmbedding,
+    SentenceTransformerEmbedding,
+)
 from app.infrastructure.ai.llm import GeminiLLM, OllamaLLM, StubLLM
 
 
 def build_embedding(settings: Settings) -> EmbeddingPort:
     if settings.embedding_provider == "sentence_transformers":
         return SentenceTransformerEmbedding(settings.embedding_model)
+    if settings.embedding_provider == "gemini":
+        return GeminiEmbedding(
+            settings.gemini_api_key, settings.gemini_embedding_model, settings.embedding_dim
+        )
     return FakeEmbedding(settings.embedding_dim)
 
 
