@@ -55,6 +55,22 @@ const totals = computed(() => {
     fat: Math.round(acc.fat),
   }
 })
+
+function pct(current: number, target: number | undefined): number | null {
+  return target && target > 0 ? Math.round((current / target) * 100) : null
+}
+
+// Progress of the built menu against each macro target, so the day can be
+// tuned per macro (protein/carbs/fat) rather than only by total calories.
+const macroProgress = computed(() => {
+  const r = store.result
+  return (['protein', 'carbs', 'fat'] as const).map((key) => {
+    const target = r ? Math.round(r[`${key}G`]) : null
+    return { key, current: totals.value[key], target, pct: pct(totals.value[key], r?.[`${key}G`]) }
+  })
+})
+
+const kcalPct = computed(() => pct(totals.value.kcal, store.result?.calories))
 </script>
 
 <template>
@@ -197,19 +213,31 @@ const totals = computed(() => {
           </button>
         </div>
         <div class="totals">
-          <strong>{{ totals.kcal }} kcal</strong>
-          <span
-            >{{ t('nutrition.macros.protein') }} {{ totals.protein }}g ·
-            {{ t('nutrition.macros.carbs') }} {{ totals.carbs }}g · {{ t('nutrition.macros.fat') }}
-            {{ totals.fat }}g</span
-          >
-          <span v-if="store.result" class="vs">
-            {{
-              t('nutrition.menu.ofTarget', {
-                n: Math.round((totals.kcal / store.result.calories) * 100),
-              })
-            }}
-          </span>
+          <div class="tot-head">
+            <strong>{{ totals.kcal }} kcal</strong>
+            <span v-if="store.result" class="vs">
+              {{ t('nutrition.menu.ofTarget', { n: kcalPct }) }}
+            </span>
+          </div>
+
+          <!-- Per-macro progress against the calculated targets, so the day can
+               be balanced by protein/carbs/fat and not only by total calories. -->
+          <ul class="macro-progress">
+            <li v-for="m in macroProgress" :key="m.key" class="mp-row">
+              <span class="mp-label">{{ t(`nutrition.macros.${m.key}`) }}</span>
+              <span class="mp-val">
+                {{ m.current }}<template v-if="m.target != null"> / {{ m.target }}</template> g
+              </span>
+              <div v-if="m.pct != null" class="mp-bar" :title="`${m.pct}%`">
+                <div
+                  class="mp-fill"
+                  :class="{ over: m.pct > 110 }"
+                  :style="{ width: `${Math.min(m.pct, 100)}%` }"
+                />
+              </div>
+              <span v-if="m.pct != null" class="mp-pct">{{ m.pct }}%</span>
+            </li>
+          </ul>
         </div>
       </div>
       <p v-else class="hint">{{ t('nutrition.menu.empty') }}</p>
@@ -504,20 +532,78 @@ select:focus {
 }
 .totals {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-sm) var(--space-md);
+  flex-direction: column;
+  gap: var(--space-sm);
   padding-top: var(--space-sm);
   border-top: 1px dashed var(--color-border);
+}
+.tot-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
 }
 .totals strong {
   font-size: 1.1rem;
 }
-.totals span {
-  color: var(--color-muted);
-  font-size: 0.85rem;
-}
 .totals .vs {
   color: var(--color-accent);
+  font-size: 0.85rem;
+}
+.macro-progress {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mp-row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(4.5rem, auto) 1fr 2.6rem;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+.mp-label {
+  color: var(--color-text);
+  font-weight: 600;
+}
+.mp-val {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.mp-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-surface-strong);
+  overflow: hidden;
+}
+.mp-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gradient);
+  transition: width 0.3s ease;
+}
+/* Signal an overshoot (well above the target) without hiding it. */
+.mp-fill.over {
+  background: var(--color-danger);
+}
+.mp-pct {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent);
+}
+@media (max-width: 480px) {
+  .mp-row {
+    grid-template-columns: 4.5rem minmax(4rem, auto) 1fr 2.4rem;
+    gap: var(--space-xs);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mp-fill {
+    transition: none;
+  }
 }
 </style>
