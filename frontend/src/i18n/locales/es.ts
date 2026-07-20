@@ -30,9 +30,59 @@ export default {
   nav: {
     explorer: 'Explorador',
     workouts: 'Entrenamientos',
+    nutrition: 'Nutrición',
     progress: 'Progreso',
     trainers: 'Entrenadores',
     menu: 'Menú',
+  },
+  nutrition: {
+    eyebrow: 'Nutrición',
+    titleHighlight: 'Alimenta',
+    titleRest: 'tu entrenamiento',
+    lead: 'Estima tus calorías y macros diarios a partir de tu cuerpo y tu objetivo.',
+    disclaimer:
+      'Solo orientativo — no es consejo dietético ni médico, ni sustituye a un dietista-nutricionista. No indicado para menores, embarazo ni patologías.',
+    hint: 'Rellena tus datos y calcula para ver tus objetivos.',
+    kcalPerDay: 'kcal / día',
+    tdee: 'mantenimiento',
+    bmi: 'IMC',
+    form: {
+      sex: 'Sexo',
+      sexUnset: 'Prefiero no decirlo',
+      age: 'Edad',
+      height: 'Altura (cm)',
+      weight: 'Peso (kg)',
+      activity: 'Nivel de actividad',
+      goal: 'Objetivo',
+      calculate: 'Calcular',
+      calculating: 'Calculando…',
+    },
+    sex: { male: 'Hombre', female: 'Mujer', other: 'Otro' },
+    activity: {
+      sedentary: 'Sedentario (poco ejercicio)',
+      light: 'Ligero (1-3 días/semana)',
+      moderate: 'Moderado (3-5 días/semana)',
+      active: 'Activo (6-7 días/semana)',
+      very_active: 'Muy activo (trabajo físico / 2×/día)',
+    },
+    goal: { lose_fat: 'Perder grasa', maintain: 'Mantener', gain_muscle: 'Ganar músculo' },
+    macros: { protein: 'Proteína', carbs: 'Carbohidratos', fat: 'Grasa' },
+    bmiCategory: {
+      underweight: 'bajo peso',
+      normal: 'peso normal',
+      overweight: 'sobrepeso',
+      obese: 'obesidad',
+    },
+    warnings: {
+      underweight_no_deficit:
+        'Tu IMC está en rango de bajo peso, así que mantenemos calorías de mantenimiento en lugar de un déficit. Considera consultar a un profesional.',
+      min_calories_floor:
+        'Ajustado a un mínimo seguro. Ingestas muy bajas requieren supervisión profesional.',
+    },
+    errors: {
+      attributes: 'Introduce tu edad, altura y peso.',
+      calculate: 'No se pudo calcular. Inténtalo de nuevo.',
+    },
   },
   trainers: {
     eyebrow: 'Entrenadores',

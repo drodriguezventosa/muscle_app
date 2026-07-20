@@ -30,9 +30,59 @@ export default {
   nav: {
     explorer: 'Explorer',
     workouts: 'Workouts',
+    nutrition: 'Nutrition',
     progress: 'Progress',
     trainers: 'Trainers',
     menu: 'Menu',
+  },
+  nutrition: {
+    eyebrow: 'Nutrition',
+    titleHighlight: 'Fuel',
+    titleRest: 'your training',
+    lead: 'Estimate your daily calories and macros from your body and goal.',
+    disclaimer:
+      'Orientation only — not dietary or medical advice, and no substitute for a registered dietitian. Not intended for minors, pregnancy or medical conditions.',
+    hint: 'Fill in your details and calculate to see your targets.',
+    kcalPerDay: 'kcal / day',
+    tdee: 'maintenance',
+    bmi: 'BMI',
+    form: {
+      sex: 'Sex',
+      sexUnset: 'Prefer not to say',
+      age: 'Age',
+      height: 'Height (cm)',
+      weight: 'Weight (kg)',
+      activity: 'Activity level',
+      goal: 'Goal',
+      calculate: 'Calculate',
+      calculating: 'Calculating…',
+    },
+    sex: { male: 'Male', female: 'Female', other: 'Other' },
+    activity: {
+      sedentary: 'Sedentary (little exercise)',
+      light: 'Light (1-3 days/week)',
+      moderate: 'Moderate (3-5 days/week)',
+      active: 'Active (6-7 days/week)',
+      very_active: 'Very active (physical job / 2×/day)',
+    },
+    goal: { lose_fat: 'Lose fat', maintain: 'Maintain', gain_muscle: 'Gain muscle' },
+    macros: { protein: 'Protein', carbs: 'Carbs', fat: 'Fat' },
+    bmiCategory: {
+      underweight: 'underweight',
+      normal: 'normal weight',
+      overweight: 'overweight',
+      obese: 'obese',
+    },
+    warnings: {
+      underweight_no_deficit:
+        'Your BMI is in the underweight range, so we kept maintenance calories instead of a deficit. Consider seeing a professional.',
+      min_calories_floor:
+        'Adjusted to a safe minimum. Very low intakes need professional supervision.',
+    },
+    errors: {
+      attributes: 'Enter your age, height and weight.',
+      calculate: 'Could not calculate. Try again.',
+    },
   },
   trainers: {
     eyebrow: 'Trainers',

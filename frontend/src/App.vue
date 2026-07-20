@@ -35,6 +35,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     <nav id="primary-nav" class="nav" :class="{ 'nav--open': menuOpen }" @click="menuOpen = false">
       <RouterLink to="/">{{ t('nav.explorer') }}</RouterLink>
       <RouterLink to="/workouts">{{ t('nav.workouts') }}</RouterLink>
+      <RouterLink to="/nutrition">{{ t('nav.nutrition') }}</RouterLink>
       <RouterLink to="/progress">{{ t('nav.progress') }}</RouterLink>
       <RouterLink to="/trainers">{{ t('nav.trainers') }}</RouterLink>
     </nav>

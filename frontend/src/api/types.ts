@@ -25,6 +25,22 @@ export interface TargetedMuscle {
 
 export type Goal = 'fat_loss' | 'hypertrophy' | 'strength'
 
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
+export type NutritionGoal = 'lose_fat' | 'maintain' | 'gain_muscle'
+
+export interface NutritionTargets {
+  bmr: number
+  tdee: number
+  calories: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+  bmi: number
+  bmiCategory: string
+  goal: NutritionGoal
+  warning: string | null
+}
+
 export interface WorkoutItem {
   exercise: Exercise
   sets: number

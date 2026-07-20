@@ -17,6 +17,7 @@ from app.application.use_cases.muscle_use_cases import (
     ListMuscleExercises,
     ListMuscles,
 )
+from app.application.use_cases.nutrition_use_cases import CalculateNutrition
 from app.application.use_cases.recommend_exercises import RecommendExercises
 from app.application.use_cases.workout_use_cases import GenerateWorkout
 from app.core.config import get_settings
@@ -76,6 +77,10 @@ def provide_generate_workout(session: SessionDep, locale: LocaleDep) -> Generate
         SqlAlchemyExerciseRepository(session, locale),
         locale,
     )
+
+
+def provide_calculate_nutrition() -> CalculateNutrition:
+    return CalculateNutrition()
 
 
 def provide_recommend_exercises(session: SessionDep, locale: LocaleDep) -> RecommendExercises:
