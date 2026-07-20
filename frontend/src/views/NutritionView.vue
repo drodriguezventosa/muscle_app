@@ -22,12 +22,23 @@ const search = ref('')
 const menu = reactive<MenuItem[]>([])
 
 onMounted(() => void store.loadFoods())
-watch(locale, () => void store.loadFoods()) // re-localize food names
+// Re-localize the catalog on language change, and re-point the foods already in
+// the menu to the freshly localized objects (they were stored by value, so their
+// names wouldn't otherwise update).
+watch(locale, async () => {
+  await store.loadFoods()
+  for (const item of menu) {
+    const fresh = store.foods.find((f) => f.id === item.food.id)
+    if (fresh) item.food = fresh
+  }
+})
 
+// Show a tidy 10 (two rows of five on desktop); the search box narrows the
+// full catalog when the user wants something else.
 const filteredFoods = computed(() => {
   const q = search.value.trim().toLowerCase()
   const list = q ? store.foods.filter((f) => f.name.toLowerCase().includes(q)) : store.foods
-  return list.slice(0, 12)
+  return list.slice(0, 10)
 })
 
 function addFood(food: Food): void {
@@ -188,6 +199,11 @@ const kcalPct = computed(() => pct(totals.value.kcal, store.result?.calories))
             <span class="food-text">
               <span class="food-name">{{ f.name }}</span>
               <span class="food-kcal">{{ f.kcal }} {{ t('nutrition.menu.per100') }}</span>
+              <span class="food-macros">
+                {{ t('nutrition.macroAbbr.protein') }} {{ Math.round(f.proteinG) }} ·
+                {{ t('nutrition.macroAbbr.carbs') }} {{ Math.round(f.carbsG) }} ·
+                {{ t('nutrition.macroAbbr.fat') }} {{ Math.round(f.fatG) }} g
+              </span>
             </span>
             <span class="add" aria-hidden="true">+</span>
           </button>
@@ -480,6 +496,13 @@ select:focus {
   color: var(--color-muted);
   font-size: 0.75rem;
 }
+.food-macros {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  /* Wrap rather than truncate: a macro number must never be cut off. */
+  line-height: 1.3;
+}
 .add {
   color: var(--color-accent);
   font-weight: 800;
@@ -508,17 +531,37 @@ select:focus {
 }
 .mi-grams {
   display: inline-flex;
+  /* Override the global `label { flex-direction: column }` so the input and its
+     "g" unit sit side by side instead of stacking. */
+  flex-direction: row;
   align-items: center;
   gap: 4px;
   color: var(--color-muted);
   font-size: 0.85rem;
+  flex: none;
+  white-space: nowrap;
 }
 .mi-grams input {
-  width: 68px;
+  width: 64px;
+  flex: none;
+  padding-left: 8px;
+  padding-right: 8px;
+  /* Hide the number spinner: its arrows overlapped the value ("100" -> "10("). */
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.mi-grams input::-webkit-outer-spin-button,
+.mi-grams input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .mi-kcal {
-  color: var(--color-muted);
-  font-size: 0.85rem;
+  flex: none;
+  min-width: 4.5rem;
+  text-align: right;
+  color: var(--color-accent);
+  font-weight: 700;
+  font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
 }
 .rm {
@@ -560,7 +603,9 @@ select:focus {
 }
 .mp-row {
   display: grid;
-  grid-template-columns: 5.5rem minmax(4.5rem, auto) 1fr 2.6rem;
+  /* Label wide enough for the longest macro ("Carbohidratos"); the bar takes
+     minmax(0, …) so it can shrink and never pushes the numbers off-cell. */
+  grid-template-columns: 6.5rem minmax(4.5rem, auto) minmax(0, 1fr) 2.6rem;
   align-items: center;
   gap: var(--space-sm);
   font-size: 0.85rem;
@@ -569,6 +614,10 @@ select:focus {
 .mp-label {
   color: var(--color-text);
   font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .mp-val {
   white-space: nowrap;
@@ -597,8 +646,16 @@ select:focus {
 }
 @media (max-width: 480px) {
   .mp-row {
-    grid-template-columns: 4.5rem minmax(4rem, auto) 1fr 2.4rem;
+    grid-template-columns: 5.5rem minmax(3.75rem, auto) minmax(0, 1fr) 2.2rem;
     gap: var(--space-xs);
+    font-size: 0.8rem;
+  }
+}
+/* Leave room below the totals so the floating assistant bubble (bottom-right)
+   doesn't cover the last macro row's percentage on short screens. */
+@media (max-width: 820px) {
+  .menu-builder {
+    padding-bottom: 4.5rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
