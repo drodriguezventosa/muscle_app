@@ -35,6 +35,52 @@ export default {
     trainers: 'Trainers',
     menu: 'Menu',
   },
+  tour: {
+    replay: 'View the tutorial',
+    dontShowAgain: "Don't show again",
+    skip: 'Skip',
+    back: 'Back',
+    next: 'Next',
+    done: 'Get started',
+    steps: {
+      welcome: {
+        title: 'Welcome to MuscleApp',
+        body: "I'll take you on a quick tour of each section of the app. You can skip it anytime.",
+      },
+      explore: {
+        title: 'Muscle explorer',
+        body: 'Tap a muscle on the body map to see the exercises recommended to train it. No sign-up.',
+      },
+      workouts: {
+        title: 'Workouts',
+        body: 'Generate a personalized routine based on your goal, your level and where you train.',
+      },
+      nutrition: {
+        title: 'Nutrition',
+        body: 'Estimate your daily calories and macros and build a menu from the food catalog.',
+      },
+      progress: {
+        title: 'Progress',
+        body: 'Log the weight for each exercise and track your evolution session by session. Stored on this device.',
+      },
+      trainers: {
+        title: 'Trainers',
+        body: 'Hire a personal trainer or manage your students. This is a preview: no real payments or accounts yet.',
+      },
+      assistant: {
+        title: 'AI assistant',
+        body: "It's on every page: ask what to train and it recommends exercises; on Nutrition, it suggests meal ideas.",
+      },
+      controls: {
+        title: 'Theme and language',
+        body: 'Switch between light and dark mode, and between Spanish and English, whenever you like.',
+      },
+      done: {
+        title: "You're all set!",
+        body: 'Now you know the app. Replay this tutorial anytime with the "?" button in the header.',
+      },
+    },
+  },
   nutrition: {
     eyebrow: 'Nutrition',
     titleHighlight: 'Fuel',
