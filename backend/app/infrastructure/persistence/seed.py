@@ -1160,11 +1160,13 @@ VIDEOS: dict[str, str] = {
 }
 
 
-# Nutrition catalog: (name_es, name_en, category, kcal, protein_g, carbs_g, fat_g, tags) per 100 g.
-FOODS: list[tuple[str, str, str, float, float, float, float, list[str]]] = [
+# Nutrition catalog per 100 g:
+# (name_es, name_en, emoji, category, kcal, protein_g, carbs_g, fat_g, tags)
+FOODS: list[tuple[str, str, str, str, float, float, float, float, list[str]]] = [
     (
         "Pechuga de pollo",
         "Chicken breast",
+        "🍗",
         "protein",
         165,
         31,
@@ -1172,13 +1174,24 @@ FOODS: list[tuple[str, str, str, float, float, float, float, list[str]]] = [
         3.6,
         ["high_protein", "gluten_free"],
     ),
-    ("Huevo", "Egg", "protein", 155, 13, 1.1, 11, ["vegetarian", "gluten_free", "high_protein"]),
-    ("Salmón", "Salmon", "protein", 208, 20, 0, 13, ["gluten_free", "high_protein"]),
-    ("Atún", "Tuna", "protein", 132, 28, 0, 1, ["gluten_free", "high_protein"]),
-    ("Ternera magra", "Lean beef", "protein", 187, 26, 0, 9, ["gluten_free", "high_protein"]),
+    (
+        "Huevo",
+        "Egg",
+        "🥚",
+        "protein",
+        155,
+        13,
+        1.1,
+        11,
+        ["vegetarian", "gluten_free", "high_protein"],
+    ),
+    ("Salmón", "Salmon", "🐟", "protein", 208, 20, 0, 13, ["gluten_free", "high_protein"]),
+    ("Atún", "Tuna", "🐟", "protein", 132, 28, 0, 1, ["gluten_free", "high_protein"]),
+    ("Ternera magra", "Lean beef", "🥩", "protein", 187, 26, 0, 9, ["gluten_free", "high_protein"]),
     (
         "Tofu",
         "Tofu",
+        "🌱",
         "protein",
         144,
         15,
@@ -1186,11 +1199,32 @@ FOODS: list[tuple[str, str, str, float, float, float, float, list[str]]] = [
         8,
         ["vegan", "vegetarian", "gluten_free", "high_protein"],
     ),
-    ("Lentejas", "Lentils", "protein", 116, 9, 20, 0.4, ["vegan", "vegetarian", "gluten_free"]),
-    ("Garbanzos", "Chickpeas", "protein", 164, 9, 27, 2.6, ["vegan", "vegetarian", "gluten_free"]),
+    (
+        "Lentejas",
+        "Lentils",
+        "🫘",
+        "protein",
+        116,
+        9,
+        20,
+        0.4,
+        ["vegan", "vegetarian", "gluten_free"],
+    ),
+    (
+        "Garbanzos",
+        "Chickpeas",
+        "🫘",
+        "protein",
+        164,
+        9,
+        27,
+        2.6,
+        ["vegan", "vegetarian", "gluten_free"],
+    ),
     (
         "Yogur griego",
         "Greek yogurt",
+        "🥛",
         "dairy",
         59,
         10,
@@ -1201,6 +1235,7 @@ FOODS: list[tuple[str, str, str, float, float, float, float, list[str]]] = [
     (
         "Queso fresco batido",
         "Cottage cheese",
+        "🧀",
         "dairy",
         98,
         11,
@@ -1208,10 +1243,11 @@ FOODS: list[tuple[str, str, str, float, float, float, float, list[str]]] = [
         4.3,
         ["vegetarian", "gluten_free", "high_protein"],
     ),
-    ("Leche", "Milk", "dairy", 61, 3.2, 4.8, 3.3, ["vegetarian", "gluten_free"]),
+    ("Leche", "Milk", "🥛", "dairy", 61, 3.2, 4.8, 3.3, ["vegetarian", "gluten_free"]),
     (
         "Arroz blanco",
         "White rice",
+        "🍚",
         "carb",
         130,
         2.7,
@@ -1219,16 +1255,27 @@ FOODS: list[tuple[str, str, str, float, float, float, float, list[str]]] = [
         0.3,
         ["vegan", "vegetarian", "gluten_free"],
     ),
-    ("Avena", "Oats", "carb", 389, 17, 66, 7, ["vegan", "vegetarian"]),
-    ("Pan integral", "Whole-wheat bread", "carb", 247, 13, 41, 3.4, ["vegan", "vegetarian"]),
-    ("Patata", "Potato", "carb", 77, 2, 17, 0.1, ["vegan", "vegetarian", "gluten_free"]),
-    ("Pasta", "Pasta", "carb", 158, 6, 31, 0.9, ["vegan", "vegetarian"]),
-    ("Plátano", "Banana", "fruit", 89, 1.1, 23, 0.3, ["vegan", "vegetarian", "gluten_free"]),
-    ("Manzana", "Apple", "fruit", 52, 0.3, 14, 0.2, ["vegan", "vegetarian", "gluten_free"]),
-    ("Brócoli", "Broccoli", "vegetable", 34, 2.8, 7, 0.4, ["vegan", "vegetarian", "gluten_free"]),
+    ("Avena", "Oats", "🌾", "carb", 389, 17, 66, 7, ["vegan", "vegetarian"]),
+    ("Pan integral", "Whole-wheat bread", "🍞", "carb", 247, 13, 41, 3.4, ["vegan", "vegetarian"]),
+    ("Patata", "Potato", "🥔", "carb", 77, 2, 17, 0.1, ["vegan", "vegetarian", "gluten_free"]),
+    ("Pasta", "Pasta", "🍝", "carb", 158, 6, 31, 0.9, ["vegetarian", "vegan"]),
+    ("Plátano", "Banana", "🍌", "fruit", 89, 1.1, 23, 0.3, ["vegan", "vegetarian", "gluten_free"]),
+    ("Manzana", "Apple", "🍎", "fruit", 52, 0.3, 14, 0.2, ["vegan", "vegetarian", "gluten_free"]),
+    (
+        "Brócoli",
+        "Broccoli",
+        "🥦",
+        "vegetable",
+        34,
+        2.8,
+        7,
+        0.4,
+        ["vegan", "vegetarian", "gluten_free"],
+    ),
     (
         "Espinacas",
         "Spinach",
+        "🥬",
         "vegetable",
         23,
         2.9,
@@ -1236,10 +1283,11 @@ FOODS: list[tuple[str, str, str, float, float, float, float, list[str]]] = [
         0.4,
         ["vegan", "vegetarian", "gluten_free"],
     ),
-    ("Aguacate", "Avocado", "fat", 160, 2, 9, 15, ["vegan", "vegetarian", "gluten_free"]),
+    ("Aguacate", "Avocado", "🥑", "fat", 160, 2, 9, 15, ["vegan", "vegetarian", "gluten_free"]),
     (
         "Almendras",
         "Almonds",
+        "🥜",
         "fat",
         579,
         21,
@@ -1247,10 +1295,21 @@ FOODS: list[tuple[str, str, str, float, float, float, float, list[str]]] = [
         50,
         ["vegan", "vegetarian", "gluten_free", "high_protein"],
     ),
-    ("Aceite de oliva", "Olive oil", "fat", 884, 0, 0, 100, ["vegan", "vegetarian", "gluten_free"]),
+    (
+        "Aceite de oliva",
+        "Olive oil",
+        "🫒",
+        "fat",
+        884,
+        0,
+        0,
+        100,
+        ["vegan", "vegetarian", "gluten_free"],
+    ),
     (
         "Mantequilla de cacahuete",
         "Peanut butter",
+        "🥜",
         "fat",
         588,
         25,
@@ -1270,6 +1329,7 @@ async def _seed_foods(session: AsyncSession) -> bool:
         FoodModel(
             name=name_es,
             name_en=name_en,
+            emoji=emoji,
             category=category,
             kcal=kcal,
             protein_g=protein,
@@ -1277,7 +1337,7 @@ async def _seed_foods(session: AsyncSession) -> bool:
             fat_g=fat,
             tags=tags,
         )
-        for name_es, name_en, category, kcal, protein, carbs, fat, tags in FOODS
+        for name_es, name_en, emoji, category, kcal, protein, carbs, fat, tags in FOODS
     )
     await session.commit()
     return True

@@ -174,8 +174,11 @@ const totals = computed(() => {
       <ul class="foods">
         <li v-for="f in filteredFoods" :key="f.id">
           <button type="button" class="food" @click="addFood(f)">
-            <span class="food-name">{{ f.name }}</span>
-            <span class="food-kcal">{{ f.kcal }} {{ t('nutrition.menu.per100') }}</span>
+            <span class="food-emoji" aria-hidden="true">{{ f.emoji }}</span>
+            <span class="food-text">
+              <span class="food-name">{{ f.name }}</span>
+              <span class="food-kcal">{{ f.kcal }} {{ t('nutrition.menu.per100') }}</span>
+            </span>
             <span class="add" aria-hidden="true">+</span>
           </button>
         </li>
@@ -183,6 +186,7 @@ const totals = computed(() => {
 
       <div v-if="menu.length" class="menu">
         <div v-for="(item, i) in menu" :key="item.food.id" class="menu-item">
+          <span class="mi-emoji" aria-hidden="true">{{ item.food.emoji }}</span>
           <span class="mi-name">{{ item.food.name }}</span>
           <label class="mi-grams">
             <input v-model.number="item.grams" type="number" min="0" step="10" />
@@ -231,8 +235,11 @@ const totals = computed(() => {
       <ul v-if="store.chatFoods.length" class="foods">
         <li v-for="f in store.chatFoods" :key="f.id">
           <button type="button" class="food" @click="addFood(f)">
-            <span class="food-name">{{ f.name }}</span>
-            <span class="food-kcal">{{ f.kcal }} {{ t('nutrition.menu.per100') }}</span>
+            <span class="food-emoji" aria-hidden="true">{{ f.emoji }}</span>
+            <span class="food-text">
+              <span class="food-name">{{ f.name }}</span>
+              <span class="food-kcal">{{ f.kcal }} {{ t('nutrition.menu.per100') }}</span>
+            </span>
             <span class="add" aria-hidden="true">+</span>
           </button>
         </li>
@@ -432,18 +439,16 @@ select:focus {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--space-sm);
-}
-.foods li {
-  flex: 1 1 200px;
 }
 .food {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
+  height: 100%;
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -456,17 +461,32 @@ select:focus {
 .food:hover {
   border-color: var(--color-accent);
 }
+.food-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex: none;
+}
+.food-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
 .food-name {
   font-weight: 600;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .food-kcal {
-  margin-left: auto;
   color: var(--color-muted);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
 }
 .add {
   color: var(--color-accent);
   font-weight: 800;
+  flex: none;
 }
 .menu {
   display: flex;
@@ -479,6 +499,11 @@ select:focus {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+}
+.mi-emoji {
+  font-size: 1.2rem;
+  line-height: 1;
+  flex: none;
 }
 .mi-name {
   flex: 1;

@@ -18,6 +18,7 @@ def to_food_entity(model: FoodModel, locale: str) -> Food:
         protein_g=model.protein_g,
         carbs_g=model.carbs_g,
         fat_g=model.fat_g,
+        emoji=model.emoji,
         tags=tuple(model.tags or ()),
     )
 

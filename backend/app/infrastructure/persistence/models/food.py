@@ -15,6 +15,7 @@ class FoodModel(Base):
     name: Mapped[str] = mapped_column(String(120), unique=True)
     name_en: Mapped[str | None] = mapped_column(String(120), nullable=True)
     category: Mapped[str] = mapped_column(String(40))
+    emoji: Mapped[str] = mapped_column(String(8), default="")
     kcal: Mapped[float] = mapped_column(Float)
     protein_g: Mapped[float] = mapped_column(Float)
     carbs_g: Mapped[float] = mapped_column(Float)

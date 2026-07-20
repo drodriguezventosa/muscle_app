@@ -25,6 +25,7 @@ class FoodRead(BaseModel):
     id: int
     name: str
     category: str
+    emoji: str
     kcal: float
     protein_g: float
     carbs_g: float

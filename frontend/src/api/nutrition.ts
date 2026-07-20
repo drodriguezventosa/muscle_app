@@ -9,6 +9,7 @@ interface FoodPayload {
   id: number
   name: string
   category: string
+  emoji: string
   kcal: number
   protein_g: number
   carbs_g: number
@@ -21,6 +22,7 @@ function toFood(f: FoodPayload): Food {
     id: f.id,
     name: f.name,
     category: f.category,
+    emoji: f.emoji,
     kcal: f.kcal,
     proteinG: f.protein_g,
     carbsG: f.carbs_g,

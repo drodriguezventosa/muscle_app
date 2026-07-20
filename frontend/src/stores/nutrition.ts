@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 import {
   calculateNutrition,
@@ -44,6 +44,12 @@ export const useNutritionStore = defineStore('nutrition', () => {
   const result = ref<NutritionTargets | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  // Changing any input invalidates a shown result (the numbers would be stale),
+  // so clear it and let the user press Calculate again. The inputs are kept.
+  watch([sex, age, heightCm, weightKg, activity, goal], () => {
+    if (result.value) result.value = null
+  })
 
   const foods = ref<Food[]>([])
   async function loadFoods(): Promise<void> {

@@ -32,6 +32,7 @@ export interface Food {
   id: number
   name: string
   category: string
+  emoji: string
   kcal: number
   proteinG: number
   carbsG: number
