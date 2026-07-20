@@ -113,6 +113,7 @@ export default {
     },
     goal: { lose_fat: 'Lose fat', maintain: 'Maintain', gain_muscle: 'Gain muscle' },
     macros: { protein: 'Protein', carbs: 'Carbs', fat: 'Fat' },
+    macroAbbr: { protein: 'P', carbs: 'C', fat: 'F' },
     menu: {
       title: 'Build a menu',
       lead: 'Add foods and see how the day adds up against your targets.',

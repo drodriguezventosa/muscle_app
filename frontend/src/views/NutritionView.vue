@@ -188,6 +188,11 @@ const kcalPct = computed(() => pct(totals.value.kcal, store.result?.calories))
             <span class="food-text">
               <span class="food-name">{{ f.name }}</span>
               <span class="food-kcal">{{ f.kcal }} {{ t('nutrition.menu.per100') }}</span>
+              <span class="food-macros">
+                {{ t('nutrition.macroAbbr.protein') }} {{ Math.round(f.proteinG) }} ·
+                {{ t('nutrition.macroAbbr.carbs') }} {{ Math.round(f.carbsG) }} ·
+                {{ t('nutrition.macroAbbr.fat') }} {{ Math.round(f.fatG) }} g
+              </span>
             </span>
             <span class="add" aria-hidden="true">+</span>
           </button>
@@ -480,6 +485,13 @@ select:focus {
   color: var(--color-muted);
   font-size: 0.75rem;
 }
+.food-macros {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  /* Wrap rather than truncate: a macro number must never be cut off. */
+  line-height: 1.3;
+}
 .add {
   color: var(--color-accent);
   font-weight: 800;
@@ -560,7 +572,9 @@ select:focus {
 }
 .mp-row {
   display: grid;
-  grid-template-columns: 5.5rem minmax(4.5rem, auto) 1fr 2.6rem;
+  /* Label wide enough for the longest macro ("Carbohidratos"); the bar takes
+     minmax(0, …) so it can shrink and never pushes the numbers off-cell. */
+  grid-template-columns: 6.5rem minmax(4.5rem, auto) minmax(0, 1fr) 2.6rem;
   align-items: center;
   gap: var(--space-sm);
   font-size: 0.85rem;
@@ -569,6 +583,10 @@ select:focus {
 .mp-label {
   color: var(--color-text);
   font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .mp-val {
   white-space: nowrap;
@@ -597,8 +615,16 @@ select:focus {
 }
 @media (max-width: 480px) {
   .mp-row {
-    grid-template-columns: 4.5rem minmax(4rem, auto) 1fr 2.4rem;
+    grid-template-columns: 5.5rem minmax(3.75rem, auto) minmax(0, 1fr) 2.2rem;
     gap: var(--space-xs);
+    font-size: 0.8rem;
+  }
+}
+/* Leave room below the totals so the floating assistant bubble (bottom-right)
+   doesn't cover the last macro row's percentage on short screens. */
+@media (max-width: 820px) {
+  .menu-builder {
+    padding-bottom: 4.5rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
