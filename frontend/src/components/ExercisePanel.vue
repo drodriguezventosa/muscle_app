@@ -22,12 +22,14 @@ const activeVideo = ref<{ url: string; title: string } | null>(null)
     <p v-else class="hint">{{ t('panel.prompt') }}</p>
 
     <p v-if="error" class="error" role="alert">{{ error }}</p>
-    <p v-else-if="loading" class="hint">{{ t('panel.loading') }}</p>
+    <p v-else-if="loading && exercises.length === 0" class="hint">{{ t('panel.loading') }}</p>
     <p v-else-if="muscleName && exercises.length === 0" class="hint">
       {{ t('panel.empty') }}
     </p>
 
-    <ul v-if="exercises.length" class="list">
+    <!-- Keep the list mounted while a new muscle loads (just dim it) so the panel
+         height stays stable and the sticky map doesn't repaint abruptly. -->
+    <ul v-if="exercises.length" class="list" :class="{ 'is-loading': loading }">
       <li v-for="exercise in exercises" :key="exercise.id" class="card">
         <div class="card-head">
           <h3 class="card-title">{{ exercise.name }}</h3>
@@ -102,6 +104,16 @@ const activeVideo = ref<{ url: string; title: string } | null>(null)
   padding-right: 4px;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
+  transition: opacity 0.2s ease;
+}
+/* Dim (don't remove) the list while the next muscle's exercises load. */
+.list.is-loading {
+  opacity: 0.45;
+}
+@media (prefers-reduced-motion: reduce) {
+  .list {
+    transition: none;
+  }
 }
 .list::-webkit-scrollbar {
   width: 6px;

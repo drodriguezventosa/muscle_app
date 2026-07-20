@@ -66,14 +66,23 @@ export const useExplorerStore = defineStore('explorer', () => {
     }
   }
 
-  async function selectMuscle(svgId: string): Promise<void> {
+  async function selectMuscle(svgId: string, force = false): Promise<void> {
+    // Re-clicking the muscle already shown would clear the list and re-fetch
+    // identical data, thrashing the layout (the sticky map repaints, leaving a
+    // "ghost"). Ignore it unless a refetch is really needed (filters/locale).
+    if (!force && svgId === selectedSvgId.value && !loading.value && error.value === null) {
+      return
+    }
     selectedSvgId.value = svgId
-    exercises.value = []
     error.value = null
     loading.value = true
+    // Keep the current list visible (dimmed by the panel) while the new one
+    // loads instead of clearing it: emptying the panel would collapse its
+    // height and, with the sticky map, repaint the figures abruptly.
     try {
       exercises.value = await getMuscleExercises(svgId, filters())
     } catch {
+      exercises.value = []
       error.value = i18n.global.t('errors.loadExercises')
     } finally {
       loading.value = false
@@ -83,7 +92,8 @@ export const useExplorerStore = defineStore('explorer', () => {
   // Re-query active muscles and (if a muscle is open) its filtered exercises.
   async function applyFilters(): Promise<void> {
     await refreshActive()
-    if (selectedSvgId.value) await selectMuscle(selectedSvgId.value)
+    // Force: the same muscle must re-fetch under the new equipment/level filters.
+    if (selectedSvgId.value) await selectMuscle(selectedSvgId.value, true)
   }
 
   function toggleValue<T>(list: T[], value: T): T[] {
