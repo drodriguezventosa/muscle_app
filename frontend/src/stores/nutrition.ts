@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-import { calculateNutrition, type NutritionRequest } from '@/api/nutrition'
-import type { ActivityLevel, NutritionGoal, NutritionTargets } from '@/api/types'
+import { calculateNutrition, listFoods, type NutritionRequest } from '@/api/nutrition'
+import type { ActivityLevel, Food, NutritionGoal, NutritionTargets } from '@/api/types'
 import { i18n } from '@/i18n'
 
 // Last inputs + result persisted client-side (no login, ADR-0006/0011).
@@ -39,6 +39,15 @@ export const useNutritionStore = defineStore('nutrition', () => {
   const result = ref<NutritionTargets | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  const foods = ref<Food[]>([])
+  async function loadFoods(): Promise<void> {
+    try {
+      foods.value = await listFoods()
+    } catch {
+      // catalog is best-effort; the calculator still works without it
+    }
+  }
 
   function persist(): void {
     const data: Persisted = {
@@ -77,5 +86,18 @@ export const useNutritionStore = defineStore('nutrition', () => {
     }
   }
 
-  return { sex, age, heightCm, weightKg, activity, goal, result, loading, error, calculate }
+  return {
+    sex,
+    age,
+    heightCm,
+    weightKg,
+    activity,
+    goal,
+    result,
+    loading,
+    error,
+    calculate,
+    foods,
+    loadFoods,
+  }
 })

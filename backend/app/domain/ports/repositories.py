@@ -7,6 +7,7 @@ which database or ORM backs these.
 from abc import ABC, abstractmethod
 
 from app.domain.entities.exercise import Exercise
+from app.domain.entities.food import Food
 from app.domain.entities.muscle import Muscle
 from app.domain.value_objects.enums import Difficulty, Equipment
 
@@ -71,4 +72,19 @@ class ExerciseRepository(ABC):
 
         Exercises without an embedding are excluded. Optional structured filters
         (equipment, difficulty) narrow the search before ranking by similarity.
+        """
+
+
+class FoodRepository(ABC):
+    """Read access to the nutrition food catalog."""
+
+    @abstractmethod
+    async def list_all(self) -> list[Food]:
+        """Return the whole food catalog, ordered by name."""
+
+    @abstractmethod
+    async def search_similar(self, embedding: list[float], limit: int) -> list[Food]:
+        """Return foods most similar to the query embedding (RAG meal ideas).
+
+        Foods without an embedding are excluded.
         """

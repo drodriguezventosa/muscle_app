@@ -1,16 +1,60 @@
 <script setup lang="ts">
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import HealthDisclaimer from '@/components/HealthDisclaimer.vue'
-import type { ActivityLevel, NutritionGoal } from '@/api/types'
+import type { ActivityLevel, Food, NutritionGoal } from '@/api/types'
 import { useNutritionStore } from '@/stores/nutrition'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const store = useNutritionStore()
 
 const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active']
 const GOALS: NutritionGoal[] = ['lose_fat', 'maintain', 'gain_muscle']
 const SEXES = ['male', 'female', 'other'] as const
+
+// Menu builder: pick foods (grams) and see the running macro totals.
+interface MenuItem {
+  food: Food
+  grams: number
+}
+const search = ref('')
+const menu = reactive<MenuItem[]>([])
+
+onMounted(() => void store.loadFoods())
+watch(locale, () => void store.loadFoods()) // re-localize food names
+
+const filteredFoods = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  const list = q ? store.foods.filter((f) => f.name.toLowerCase().includes(q)) : store.foods
+  return list.slice(0, 12)
+})
+
+function addFood(food: Food): void {
+  const existing = menu.find((m) => m.food.id === food.id)
+  if (existing) existing.grams += 100
+  else menu.push({ food, grams: 100 })
+}
+function removeItem(index: number): void {
+  menu.splice(index, 1)
+}
+
+const totals = computed(() => {
+  const acc = { kcal: 0, protein: 0, carbs: 0, fat: 0 }
+  for (const { food, grams } of menu) {
+    const k = grams / 100
+    acc.kcal += food.kcal * k
+    acc.protein += food.proteinG * k
+    acc.carbs += food.carbsG * k
+    acc.fat += food.fatG * k
+  }
+  return {
+    kcal: Math.round(acc.kcal),
+    protein: Math.round(acc.protein),
+    carbs: Math.round(acc.carbs),
+    fat: Math.round(acc.fat),
+  }
+})
 </script>
 
 <template>
@@ -109,6 +153,62 @@ const SEXES = ['male', 'female', 'other'] as const
           </p>
         </template>
       </div>
+    </div>
+
+    <!-- Menu builder -->
+    <div class="card glass menu-builder animate-in" style="animation-delay: 0.18s">
+      <h2 class="mb-title">{{ t('nutrition.menu.title') }}</h2>
+      <p class="mb-lead">{{ t('nutrition.menu.lead') }}</p>
+      <input
+        v-model="search"
+        class="search"
+        type="search"
+        :placeholder="t('nutrition.menu.search')"
+      />
+      <ul class="foods">
+        <li v-for="f in filteredFoods" :key="f.id">
+          <button type="button" class="food" @click="addFood(f)">
+            <span class="food-name">{{ f.name }}</span>
+            <span class="food-kcal">{{ f.kcal }} {{ t('nutrition.menu.per100') }}</span>
+            <span class="add" aria-hidden="true">+</span>
+          </button>
+        </li>
+      </ul>
+
+      <div v-if="menu.length" class="menu">
+        <div v-for="(item, i) in menu" :key="item.food.id" class="menu-item">
+          <span class="mi-name">{{ item.food.name }}</span>
+          <label class="mi-grams">
+            <input v-model.number="item.grams" type="number" min="0" step="10" />
+            g
+          </label>
+          <span class="mi-kcal">{{ Math.round((item.food.kcal * item.grams) / 100) }} kcal</span>
+          <button
+            type="button"
+            class="rm"
+            :aria-label="t('nutrition.menu.remove')"
+            @click="removeItem(i)"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="totals">
+          <strong>{{ totals.kcal }} kcal</strong>
+          <span
+            >{{ t('nutrition.macros.protein') }} {{ totals.protein }}g ·
+            {{ t('nutrition.macros.carbs') }} {{ totals.carbs }}g · {{ t('nutrition.macros.fat') }}
+            {{ totals.fat }}g</span
+          >
+          <span v-if="store.result" class="vs">
+            {{
+              t('nutrition.menu.ofTarget', {
+                n: Math.round((totals.kcal / store.result.calories) * 100),
+              })
+            }}
+          </span>
+        </div>
+      </div>
+      <p v-else class="hint">{{ t('nutrition.menu.empty') }}</p>
     </div>
   </section>
 </template>
@@ -285,5 +385,117 @@ select:focus {
   text-align: center;
   color: var(--color-muted);
   font-size: 0.9rem;
+}
+.menu-builder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.mb-title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.mb-lead {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+.foods {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+.foods li {
+  flex: 1 1 200px;
+}
+.food {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.food:hover {
+  border-color: var(--color-accent);
+}
+.food-name {
+  font-weight: 600;
+}
+.food-kcal {
+  margin-left: auto;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+.add {
+  color: var(--color-accent);
+  font-weight: 800;
+}
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-md);
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.mi-name {
+  flex: 1;
+  min-width: 0;
+}
+.mi-grams {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+.mi-grams input {
+  width: 68px;
+}
+.mi-kcal {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.rm {
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.rm:hover {
+  color: var(--color-danger);
+}
+.totals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm) var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--color-border);
+}
+.totals strong {
+  font-size: 1.1rem;
+}
+.totals span {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+.totals .vs {
+  color: var(--color-accent);
 }
 </style>

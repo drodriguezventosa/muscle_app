@@ -28,6 +28,17 @@ export type Goal = 'fat_loss' | 'hypertrophy' | 'strength'
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
 export type NutritionGoal = 'lose_fat' | 'maintain' | 'gain_muscle'
 
+export interface Food {
+  id: number
+  name: string
+  category: string
+  kcal: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+  tags: string[]
+}
+
 export interface NutritionTargets {
   bmr: number
   tdee: number

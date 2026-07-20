@@ -55,3 +55,24 @@ def test_calories_never_below_the_floor() -> None:
         goal=NutritionGoal.LOSE_FAT,
     )
     assert t.calories >= MIN_CALORIES
+
+
+class _FakeFoodRepo:
+    def __init__(self, foods: list[object]) -> None:
+        self._foods = foods
+
+    async def list_all(self) -> list[object]:
+        return self._foods
+
+    async def search_similar(self, embedding: list[float], limit: int) -> list[object]:
+        return self._foods[:limit]
+
+
+async def test_list_foods_returns_catalog() -> None:
+    from app.application.use_cases.nutrition_use_cases import ListFoods
+    from app.domain.entities.food import Food
+
+    food = Food(id=1, name="Egg", category="protein", kcal=155, protein_g=13, carbs_g=1.1, fat_g=11)
+    result = await ListFoods(_FakeFoodRepo([food])).execute()  # type: ignore[arg-type]
+    assert result[0].name == "Egg"
+    assert result[0].category == "protein"

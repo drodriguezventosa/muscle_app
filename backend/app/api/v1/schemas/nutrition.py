@@ -19,6 +19,19 @@ class NutritionRequest(BaseModel):
     goal: NutritionGoal
 
 
+class FoodRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    category: str
+    kcal: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+    tags: list[str]
+
+
 class NutritionTargetsRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

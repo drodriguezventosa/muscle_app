@@ -6,6 +6,7 @@ Alembic autogenerate and `create_all` rely on.
 
 from app.infrastructure.persistence.models.base import EMBEDDING_DIM, Base
 from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
+from app.infrastructure.persistence.models.food import FoodModel
 from app.infrastructure.persistence.models.muscle import MuscleModel
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "Base",
     "ExerciseModel",
     "ExerciseMuscleModel",
+    "FoodModel",
     "MuscleModel",
 ]

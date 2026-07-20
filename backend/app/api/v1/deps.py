@@ -17,7 +17,7 @@ from app.application.use_cases.muscle_use_cases import (
     ListMuscleExercises,
     ListMuscles,
 )
-from app.application.use_cases.nutrition_use_cases import CalculateNutrition
+from app.application.use_cases.nutrition_use_cases import CalculateNutrition, ListFoods
 from app.application.use_cases.recommend_exercises import RecommendExercises
 from app.application.use_cases.workout_use_cases import GenerateWorkout
 from app.core.config import get_settings
@@ -27,6 +27,9 @@ from app.infrastructure.cache.factory import build_cache
 from app.infrastructure.persistence.database import get_session
 from app.infrastructure.persistence.repositories.exercise_repository import (
     SqlAlchemyExerciseRepository,
+)
+from app.infrastructure.persistence.repositories.food_repository import (
+    SqlAlchemyFoodRepository,
 )
 from app.infrastructure.persistence.repositories.muscle_repository import (
     SqlAlchemyMuscleRepository,
@@ -81,6 +84,10 @@ def provide_generate_workout(session: SessionDep, locale: LocaleDep) -> Generate
 
 def provide_calculate_nutrition() -> CalculateNutrition:
     return CalculateNutrition()
+
+
+def provide_list_foods(session: SessionDep, locale: LocaleDep) -> ListFoods:
+    return ListFoods(SqlAlchemyFoodRepository(session, locale))
 
 
 def provide_recommend_exercises(session: SessionDep, locale: LocaleDep) -> RecommendExercises:

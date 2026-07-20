@@ -6,6 +6,8 @@ person, and a hard minimum-calorie floor.
 """
 
 from app.application.dto.nutrition import NutritionTargets
+from app.domain.entities.food import Food
+from app.domain.ports.repositories import FoodRepository
 from app.domain.value_objects.enums import ActivityLevel, NutritionGoal
 
 # Activity multipliers over BMR (standard Mifflin-St Jeor companions).
@@ -95,3 +97,13 @@ class CalculateNutrition:
             goal=effective_goal,
             warning=warning,
         )
+
+
+class ListFoods:
+    """Return the whole food catalog (localized by the repository)."""
+
+    def __init__(self, foods: FoodRepository) -> None:
+        self._foods = foods
+
+    async def execute(self) -> list[Food]:
+        return await self._foods.list_all()

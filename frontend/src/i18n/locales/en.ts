@@ -67,6 +67,15 @@ export default {
     },
     goal: { lose_fat: 'Lose fat', maintain: 'Maintain', gain_muscle: 'Gain muscle' },
     macros: { protein: 'Protein', carbs: 'Carbs', fat: 'Fat' },
+    menu: {
+      title: 'Build a menu',
+      lead: 'Add foods and see how the day adds up against your targets.',
+      search: 'Search foods…',
+      per100: 'kcal /100g',
+      empty: 'Add foods to build your day.',
+      remove: 'Remove',
+      ofTarget: '{n}% of your target',
+    },
     bmiCategory: {
       underweight: 'underweight',
       normal: 'normal weight',

@@ -2,7 +2,34 @@
 // personal data stays out of URLs.
 
 import { api } from './client'
-import type { ActivityLevel, NutritionGoal, NutritionTargets } from './types'
+import type { ActivityLevel, Food, NutritionGoal, NutritionTargets } from './types'
+import { i18n } from '@/i18n'
+
+interface FoodPayload {
+  id: number
+  name: string
+  category: string
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  tags: string[]
+}
+
+export async function listFoods(): Promise<Food[]> {
+  const lang = i18n.global.locale.value
+  const p = await api.get<FoodPayload[]>(`/nutrition/foods?lang=${lang}`)
+  return p.map((f) => ({
+    id: f.id,
+    name: f.name,
+    category: f.category,
+    kcal: f.kcal,
+    proteinG: f.protein_g,
+    carbsG: f.carbs_g,
+    fatG: f.fat_g,
+    tags: f.tags,
+  }))
+}
 
 export interface NutritionRequest {
   sex?: 'male' | 'female' | 'other'

@@ -2,14 +2,18 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
-from app.api.v1.deps import provide_calculate_nutrition
-from app.api.v1.schemas.nutrition import NutritionRequest, NutritionTargetsRead
+from app.api.v1.deps import provide_calculate_nutrition, provide_list_foods
+from app.api.v1.schemas.nutrition import FoodRead, NutritionRequest, NutritionTargetsRead
 from app.application.dto.nutrition import NutritionTargets
-from app.application.use_cases.nutrition_use_cases import CalculateNutrition
+from app.application.use_cases.nutrition_use_cases import CalculateNutrition, ListFoods
+from app.domain.entities.food import Food
 
 router = APIRouter(prefix="/nutrition", tags=["nutrition"])
+
+# The food catalog changes rarely — let browsers/CDNs cache it.
+_CATALOG_CACHE = "public, max-age=300, stale-while-revalidate=86400"
 
 
 @router.post(
@@ -29,3 +33,12 @@ async def calculate(
         activity=payload.activity,
         goal=payload.goal,
     )
+
+
+@router.get("/foods", response_model=list[FoodRead], summary="List the food catalog")
+async def list_foods(
+    response: Response,
+    use_case: Annotated[ListFoods, Depends(provide_list_foods)],
+) -> list[Food]:
+    response.headers["Cache-Control"] = _CATALOG_CACHE
+    return await use_case.execute()

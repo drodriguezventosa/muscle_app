@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.value_objects.enums import Difficulty, Equipment, MuscleGroup, MuscleRole
 from app.infrastructure.persistence.database import get_session_factory
 from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
+from app.infrastructure.persistence.models.food import FoodModel
 from app.infrastructure.persistence.models.muscle import MuscleModel
 
 
@@ -1159,11 +1160,135 @@ VIDEOS: dict[str, str] = {
 }
 
 
+# Nutrition catalog: (name_es, name_en, category, kcal, protein_g, carbs_g, fat_g, tags) per 100 g.
+FOODS: list[tuple[str, str, str, float, float, float, float, list[str]]] = [
+    (
+        "Pechuga de pollo",
+        "Chicken breast",
+        "protein",
+        165,
+        31,
+        0,
+        3.6,
+        ["high_protein", "gluten_free"],
+    ),
+    ("Huevo", "Egg", "protein", 155, 13, 1.1, 11, ["vegetarian", "gluten_free", "high_protein"]),
+    ("Salmón", "Salmon", "protein", 208, 20, 0, 13, ["gluten_free", "high_protein"]),
+    ("Atún", "Tuna", "protein", 132, 28, 0, 1, ["gluten_free", "high_protein"]),
+    ("Ternera magra", "Lean beef", "protein", 187, 26, 0, 9, ["gluten_free", "high_protein"]),
+    (
+        "Tofu",
+        "Tofu",
+        "protein",
+        144,
+        15,
+        3,
+        8,
+        ["vegan", "vegetarian", "gluten_free", "high_protein"],
+    ),
+    ("Lentejas", "Lentils", "protein", 116, 9, 20, 0.4, ["vegan", "vegetarian", "gluten_free"]),
+    ("Garbanzos", "Chickpeas", "protein", 164, 9, 27, 2.6, ["vegan", "vegetarian", "gluten_free"]),
+    (
+        "Yogur griego",
+        "Greek yogurt",
+        "dairy",
+        59,
+        10,
+        3.6,
+        0.4,
+        ["vegetarian", "gluten_free", "high_protein"],
+    ),
+    (
+        "Queso fresco batido",
+        "Cottage cheese",
+        "dairy",
+        98,
+        11,
+        3.4,
+        4.3,
+        ["vegetarian", "gluten_free", "high_protein"],
+    ),
+    ("Leche", "Milk", "dairy", 61, 3.2, 4.8, 3.3, ["vegetarian", "gluten_free"]),
+    (
+        "Arroz blanco",
+        "White rice",
+        "carb",
+        130,
+        2.7,
+        28,
+        0.3,
+        ["vegan", "vegetarian", "gluten_free"],
+    ),
+    ("Avena", "Oats", "carb", 389, 17, 66, 7, ["vegan", "vegetarian"]),
+    ("Pan integral", "Whole-wheat bread", "carb", 247, 13, 41, 3.4, ["vegan", "vegetarian"]),
+    ("Patata", "Potato", "carb", 77, 2, 17, 0.1, ["vegan", "vegetarian", "gluten_free"]),
+    ("Pasta", "Pasta", "carb", 158, 6, 31, 0.9, ["vegan", "vegetarian"]),
+    ("Plátano", "Banana", "fruit", 89, 1.1, 23, 0.3, ["vegan", "vegetarian", "gluten_free"]),
+    ("Manzana", "Apple", "fruit", 52, 0.3, 14, 0.2, ["vegan", "vegetarian", "gluten_free"]),
+    ("Brócoli", "Broccoli", "vegetable", 34, 2.8, 7, 0.4, ["vegan", "vegetarian", "gluten_free"]),
+    (
+        "Espinacas",
+        "Spinach",
+        "vegetable",
+        23,
+        2.9,
+        3.6,
+        0.4,
+        ["vegan", "vegetarian", "gluten_free"],
+    ),
+    ("Aguacate", "Avocado", "fat", 160, 2, 9, 15, ["vegan", "vegetarian", "gluten_free"]),
+    (
+        "Almendras",
+        "Almonds",
+        "fat",
+        579,
+        21,
+        22,
+        50,
+        ["vegan", "vegetarian", "gluten_free", "high_protein"],
+    ),
+    ("Aceite de oliva", "Olive oil", "fat", 884, 0, 0, 100, ["vegan", "vegetarian", "gluten_free"]),
+    (
+        "Mantequilla de cacahuete",
+        "Peanut butter",
+        "fat",
+        588,
+        25,
+        20,
+        50,
+        ["vegan", "vegetarian", "high_protein"],
+    ),
+]
+
+
+async def _seed_foods(session: AsyncSession) -> bool:
+    """Seed the food catalog if empty. Independent of muscles/exercises so it
+    lands on an already-seeded database (e.g. an existing production DB)."""
+    if await session.scalar(select(func.count()).select_from(FoodModel)):
+        return False
+    session.add_all(
+        FoodModel(
+            name=name_es,
+            name_en=name_en,
+            category=category,
+            kcal=kcal,
+            protein_g=protein,
+            carbs_g=carbs,
+            fat_g=fat,
+            tags=tags,
+        )
+        for name_es, name_en, category, kcal, protein, carbs, fat, tags in FOODS
+    )
+    await session.commit()
+    return True
+
+
 async def seed(session: AsyncSession) -> bool:
-    """Populate the catalog if empty. Returns True if data was inserted."""
+    """Populate the catalog if empty. Returns True if any data was inserted."""
+    foods_inserted = await _seed_foods(session)
     existing = await session.scalar(select(func.count()).select_from(MuscleModel))
     if existing:
-        return False
+        return foods_inserted
 
     muscles = {
         svg_id: MuscleModel(
