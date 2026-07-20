@@ -52,3 +52,30 @@ class Goal(StrEnum):
     FAT_LOSS = "fat_loss"
     HYPERTROPHY = "hypertrophy"
     STRENGTH = "strength"
+
+
+class ActivityLevel(StrEnum):
+    """Physical activity level, used to scale BMR into daily energy needs."""
+
+    SEDENTARY = "sedentary"
+    LIGHT = "light"
+    MODERATE = "moderate"
+    ACTIVE = "active"
+    VERY_ACTIVE = "very_active"
+
+
+class NutritionGoal(StrEnum):
+    """Dietary goal driving the calorie adjustment over maintenance."""
+
+    LOSE_FAT = "lose_fat"
+    MAINTAIN = "maintain"
+    GAIN_MUSCLE = "gain_muscle"
+
+
+class DietTag(StrEnum):
+    """Dietary suitability tags for foods (for filtering/RAG)."""
+
+    VEGETARIAN = "vegetarian"
+    VEGAN = "vegan"
+    GLUTEN_FREE = "gluten_free"
+    HIGH_PROTEIN = "high_protein"

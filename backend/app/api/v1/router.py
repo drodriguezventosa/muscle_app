@@ -6,10 +6,11 @@ that orchestrators (Cloud Run, Docker) can reach them without the version prefix
 
 from fastapi import APIRouter
 
-from app.api.v1.routers import chat, exercises, muscles, workouts
+from app.api.v1.routers import chat, exercises, muscles, nutrition, workouts
 
 api_router = APIRouter()
 api_router.include_router(muscles.router)
 api_router.include_router(exercises.router)
 api_router.include_router(chat.router)
 api_router.include_router(workouts.router)
+api_router.include_router(nutrition.router)

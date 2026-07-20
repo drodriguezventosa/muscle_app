@@ -15,6 +15,11 @@ export const router = createRouter({
       component: () => import('@/views/WorkoutsView.vue'),
     },
     {
+      path: '/nutrition',
+      name: 'nutrition',
+      component: () => import('@/views/NutritionView.vue'),
+    },
+    {
       path: '/progress',
       name: 'progress',
       component: () => import('@/views/ProgressView.vue'),

@@ -14,7 +14,10 @@ from sqlalchemy import text
 from app.core.config import get_settings
 from app.infrastructure.ai.factory import build_embedding
 from app.infrastructure.persistence.database import get_engine, get_session_factory
-from app.infrastructure.persistence.embeddings_backfill import backfill_embeddings
+from app.infrastructure.persistence.embeddings_backfill import (
+    backfill_embeddings,
+    backfill_food_embeddings,
+)
 from app.infrastructure.persistence.models import Base
 from app.infrastructure.persistence.seed import seed
 
@@ -30,8 +33,10 @@ async def bootstrap() -> None:
         # serving (the explorer + filters work without vectors; semantic search
         # degrades until the next successful backfill).
         try:
-            count = await backfill_embeddings(session, build_embedding(get_settings()))
-            print(f"Backfilled embeddings for {count} exercises.")
+            embedding = build_embedding(get_settings())
+            count = await backfill_embeddings(session, embedding)
+            food_count = await backfill_food_embeddings(session, embedding)
+            print(f"Backfilled embeddings for {count} exercises and {food_count} foods.")
         except Exception as exc:  # noqa: BLE001 - log and keep serving
             print(f"WARNING: embedding backfill skipped ({exc!r}); serving without vectors.")
 
