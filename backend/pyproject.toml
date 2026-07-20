@@ -54,6 +54,8 @@ select = ["E", "F", "I", "B", "UP", "S", "C4", "SIM"]
 # S101 (assert) is allowed in tests
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
+# Seed data is a long, readable table (one food/exercise per line); allow long lines.
+"app/infrastructure/persistence/seed.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
