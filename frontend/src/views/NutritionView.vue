@@ -22,12 +22,23 @@ const search = ref('')
 const menu = reactive<MenuItem[]>([])
 
 onMounted(() => void store.loadFoods())
-watch(locale, () => void store.loadFoods()) // re-localize food names
+// Re-localize the catalog on language change, and re-point the foods already in
+// the menu to the freshly localized objects (they were stored by value, so their
+// names wouldn't otherwise update).
+watch(locale, async () => {
+  await store.loadFoods()
+  for (const item of menu) {
+    const fresh = store.foods.find((f) => f.id === item.food.id)
+    if (fresh) item.food = fresh
+  }
+})
 
+// Show a tidy 10 (two rows of five on desktop); the search box narrows the
+// full catalog when the user wants something else.
 const filteredFoods = computed(() => {
   const q = search.value.trim().toLowerCase()
   const list = q ? store.foods.filter((f) => f.name.toLowerCase().includes(q)) : store.foods
-  return list.slice(0, 12)
+  return list.slice(0, 10)
 })
 
 function addFood(food: Food): void {
@@ -520,17 +531,37 @@ select:focus {
 }
 .mi-grams {
   display: inline-flex;
+  /* Override the global `label { flex-direction: column }` so the input and its
+     "g" unit sit side by side instead of stacking. */
+  flex-direction: row;
   align-items: center;
   gap: 4px;
   color: var(--color-muted);
   font-size: 0.85rem;
+  flex: none;
+  white-space: nowrap;
 }
 .mi-grams input {
-  width: 68px;
+  width: 64px;
+  flex: none;
+  padding-left: 8px;
+  padding-right: 8px;
+  /* Hide the number spinner: its arrows overlapped the value ("100" -> "10("). */
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.mi-grams input::-webkit-outer-spin-button,
+.mi-grams input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .mi-kcal {
-  color: var(--color-muted);
-  font-size: 0.85rem;
+  flex: none;
+  min-width: 4.5rem;
+  text-align: right;
+  color: var(--color-accent);
+  font-weight: 700;
+  font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
 }
 .rm {
