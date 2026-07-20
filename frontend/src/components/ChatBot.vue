@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import type { Exercise } from '@/api/types'
@@ -13,13 +14,19 @@ const emit = defineEmits<{ navigate: [] }>()
 const store = useChatStore()
 const explorer = useExplorerStore()
 const { t } = useI18n()
+const route = useRoute()
 const draft = ref('')
 const activeVideo = ref<{ url: string; title: string } | null>(null)
+
+// On the nutrition page the assistant recommends meals; elsewhere, exercises.
+const isMeal = computed(() => route.path.startsWith('/nutrition'))
+// Switching context starts a fresh conversation so suggestions don't mix.
+watch(isMeal, () => store.reset())
 
 function send(): void {
   const message = draft.value
   draft.value = ''
-  void store.ask(message)
+  void store.ask(message, isMeal.value ? 'meal' : 'exercise')
 }
 
 // Select the exercise's primary muscle in the explorer, scroll to it, close chat.
@@ -41,7 +48,9 @@ async function goToExercise(exercise: Exercise): Promise<void> {
 
 <template>
   <div class="chat">
-    <p v-if="store.messages.length === 0" class="hint">{{ t('chat.intro') }}</p>
+    <p v-if="store.messages.length === 0" class="hint">
+      {{ isMeal ? t('chat.mealIntro') : t('chat.intro') }}
+    </p>
 
     <ol class="messages" aria-live="polite">
       <li v-for="(message, index) in store.messages" :key="index" :class="['msg', message.role]">
@@ -67,6 +76,13 @@ async function goToExercise(exercise: Exercise): Promise<void> {
             </button>
           </li>
         </ul>
+        <ul v-if="message.foods && message.foods.length" class="suggestions">
+          <li v-for="food in message.foods" :key="food.id" class="suggestion food-sug">
+            <span class="food-sug-emoji" aria-hidden="true">{{ food.emoji }}</span>
+            <span class="food-sug-name">{{ food.name }}</span>
+            <span class="tag">{{ food.kcal }} kcal</span>
+          </li>
+        </ul>
       </li>
     </ol>
 
@@ -79,7 +95,7 @@ async function goToExercise(exercise: Exercise): Promise<void> {
         v-model="draft"
         type="text"
         maxlength="500"
-        :placeholder="t('chat.placeholder')"
+        :placeholder="isMeal ? t('chat.mealPlaceholder') : t('chat.placeholder')"
         :disabled="store.sending"
       />
       <button type="submit" :disabled="store.sending || !draft.trim()">
@@ -101,6 +117,15 @@ async function goToExercise(exercise: Exercise): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+}
+.food-sug {
+  align-items: center;
+}
+.food-sug-emoji {
+  font-size: 1.1rem;
+}
+.food-sug-name {
+  font-weight: 600;
 }
 .hint {
   margin: 0;

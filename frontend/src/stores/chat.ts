@@ -2,13 +2,17 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { recommend } from '@/api/chat'
-import type { Exercise } from '@/api/types'
+import { recommendMeals } from '@/api/nutrition'
+import type { Exercise, Food } from '@/api/types'
 import { i18n } from '@/i18n'
+
+export type ChatMode = 'exercise' | 'meal'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
   text: string
   exercises?: Exercise[]
+  foods?: Food[]
 }
 
 export const useChatStore = defineStore('chat', () => {
@@ -16,7 +20,12 @@ export const useChatStore = defineStore('chat', () => {
   const sending = ref(false)
   const error = ref<string | null>(null)
 
-  async function ask(message: string): Promise<void> {
+  function reset(): void {
+    messages.value = []
+    error.value = null
+  }
+
+  async function ask(message: string, mode: ChatMode = 'exercise'): Promise<void> {
     const trimmed = message.trim()
     if (!trimmed || sending.value) return
 
@@ -24,12 +33,13 @@ export const useChatStore = defineStore('chat', () => {
     sending.value = true
     error.value = null
     try {
-      const recommendation = await recommend(trimmed)
-      messages.value.push({
-        role: 'assistant',
-        text: recommendation.reply,
-        exercises: recommendation.exercises,
-      })
+      if (mode === 'meal') {
+        const rec = await recommendMeals(trimmed)
+        messages.value.push({ role: 'assistant', text: rec.reply, foods: rec.foods })
+      } else {
+        const rec = await recommend(trimmed)
+        messages.value.push({ role: 'assistant', text: rec.reply, exercises: rec.exercises })
+      }
     } catch {
       error.value = i18n.global.t('errors.recommend')
     } finally {
@@ -37,5 +47,5 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  return { messages, sending, error, ask }
+  return { messages, sending, error, ask, reset }
 })

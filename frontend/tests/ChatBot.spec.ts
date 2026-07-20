@@ -1,8 +1,16 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createMemoryHistory, createRouter } from 'vue-router'
 
 import type { Exercise } from '@/api/types'
+
+// ChatBot reads the current route (meals on /nutrition, exercises elsewhere),
+// so it needs a router installed. A memory router starts at '/' (exercise mode).
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: [{ path: '/:pathMatch(.*)*', component: { template: '<div />' } }],
+})
 
 const exercise: Exercise = {
   id: 1,
@@ -37,7 +45,7 @@ describe('ChatBot', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
   it('sends the query and renders both the question and the reply', async () => {
-    const wrapper = mount(ChatBot, { global: { plugins: [i18n] } })
+    const wrapper = mount(ChatBot, { global: { plugins: [i18n, router] } })
     await wrapper.get('input').setValue('quiero entrenar pecho')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
@@ -49,7 +57,7 @@ describe('ChatBot', () => {
   it('lets the user watch a suggested exercise video and jump to the explorer', async () => {
     vi.mocked(recommend).mockResolvedValueOnce({ reply: 'Prueba esto', exercises: [exercise] })
     const wrapper = mount(ChatBot, {
-      global: { plugins: [i18n], stubs: { teleport: true } },
+      global: { plugins: [i18n, router], stubs: { teleport: true } },
     })
     await wrapper.get('input').setValue('pecho')
     await wrapper.get('form').trigger('submit')
