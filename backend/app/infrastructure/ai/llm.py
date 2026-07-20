@@ -20,11 +20,9 @@ _TIMEOUT = httpx.Timeout(30.0)
 _logger = structlog.get_logger(__name__)
 
 # Returned when the provider is unreachable or rate-limited, so the chat still
-# yields a coherent reply alongside the exercises the RAG use case already found.
-_FALLBACK = (
-    "Aquí tienes ejercicios que encajan con tu consulta; revisa la lista y "
-    "elige según tu material y nivel."
-)
+# yields a coherent reply alongside the items the RAG use case already found.
+# Domain-neutral on purpose: this text is shared by the exercise and meal chats.
+_FALLBACK = "Aquí tienes algunas sugerencias que encajan con tu consulta; revisa la lista."
 
 
 def _log_llm_error(provider: str, exc: httpx.HTTPError) -> None:
@@ -43,14 +41,15 @@ def _log_llm_error(provider: str, exc: httpx.HTTPError) -> None:
 class StubLLM(LLMPort):
     """Deterministic reply with no external call.
 
-    The concrete exercise suggestions are returned separately by the RAG use
-    case, so even this stub yields a coherent, useful response for the demo.
+    The concrete suggestions (exercises or foods) are returned separately by the
+    RAG use case, so even this stub yields a coherent response. Kept domain-neutral
+    since it backs both the exercise and the meal chats.
     """
 
     async def generate(self, system_prompt: str, user_prompt: str) -> str:
         return (
-            "Estas son algunas recomendaciones basadas en tu consulta y en el "
-            "catálogo de ejercicios. Revisa la lista y elige según tu material y nivel."
+            "Aquí tienes algunas sugerencias basadas en tu consulta y en el catálogo. "
+            "Revisa la lista y elige la que mejor se adapte a ti."
         )
 
 
