@@ -35,6 +35,52 @@ export default {
     trainers: 'Entrenadores',
     menu: 'Menú',
   },
+  tour: {
+    replay: 'Ver el tutorial',
+    dontShowAgain: 'No volver a mostrar',
+    skip: 'Saltar',
+    back: 'Anterior',
+    next: 'Siguiente',
+    done: 'Empezar',
+    steps: {
+      welcome: {
+        title: 'Bienvenido a MuscleApp',
+        body: 'Te hago un recorrido rápido por cada sección de la app. Puedes saltarlo cuando quieras.',
+      },
+      explore: {
+        title: 'Explorador muscular',
+        body: 'Pulsa un músculo del mapa del cuerpo y verás los ejercicios recomendados para trabajarlo. Sin registro.',
+      },
+      workouts: {
+        title: 'Entrenamientos',
+        body: 'Genera una rutina personalizada según tu objetivo, tu nivel y dónde entrenas.',
+      },
+      nutrition: {
+        title: 'Nutrición',
+        body: 'Calcula tus calorías y macros diarios y construye un menú con el catálogo de alimentos.',
+      },
+      progress: {
+        title: 'Progreso',
+        body: 'Registra el peso de cada ejercicio y sigue tu evolución sesión a sesión. Se guarda en este dispositivo.',
+      },
+      trainers: {
+        title: 'Entrenadores',
+        body: 'Contrata un entrenador personal o gestiona a tus alumnos. Es una demostración: aún sin pagos ni cuentas reales.',
+      },
+      assistant: {
+        title: 'Asistente con IA',
+        body: 'Está en todas las páginas: pregúntale qué entrenar y te recomienda ejercicios; en Nutrición, te sugiere ideas de comidas.',
+      },
+      controls: {
+        title: 'Tema e idioma',
+        body: 'Cambia entre modo claro y oscuro, y entre español e inglés, cuando quieras.',
+      },
+      done: {
+        title: '¡Listo!',
+        body: 'Ya conoces la app. Vuelve a ver este tutorial con el botón «?» de la cabecera.',
+      },
+    },
+  },
   nutrition: {
     eyebrow: 'Nutrición',
     titleHighlight: 'Alimenta',

@@ -4,6 +4,7 @@ import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import ChatWidget from '@/components/ChatWidget.vue'
+import GuidedTour, { type TourStep } from '@/components/GuidedTour.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 
@@ -12,6 +13,68 @@ const route = useRoute()
 
 // Mobile navigation menu (hamburger). Hidden on desktop via CSS.
 const menuOpen = ref(false)
+
+// First-visit guided tour. Shown once (flag in localStorage); the header "?"
+// button replays it on demand. Steps target stable layout elements so the tour
+// works from any route.
+const TOUR_KEY = 'muscleapp:tour-seen'
+const showTour = ref(false)
+// The tour walks through every section: each step navigates to its route and
+// spotlights the section content, then covers the assistant and the controls.
+const tourSteps: TourStep[] = [
+  { route: '/', titleKey: 'tour.steps.welcome.title', bodyKey: 'tour.steps.welcome.body' },
+  {
+    route: '/',
+    target: '[data-tour="main"]',
+    titleKey: 'tour.steps.explore.title',
+    bodyKey: 'tour.steps.explore.body',
+  },
+  {
+    route: '/workouts',
+    target: '[data-tour="main"]',
+    titleKey: 'tour.steps.workouts.title',
+    bodyKey: 'tour.steps.workouts.body',
+  },
+  {
+    route: '/nutrition',
+    target: '[data-tour="main"]',
+    titleKey: 'tour.steps.nutrition.title',
+    bodyKey: 'tour.steps.nutrition.body',
+  },
+  {
+    route: '/progress',
+    target: '[data-tour="main"]',
+    titleKey: 'tour.steps.progress.title',
+    bodyKey: 'tour.steps.progress.body',
+  },
+  {
+    route: '/trainers',
+    target: '[data-tour="main"]',
+    titleKey: 'tour.steps.trainers.title',
+    bodyKey: 'tour.steps.trainers.body',
+  },
+  {
+    target: '[data-testid="chat-toggle"]',
+    titleKey: 'tour.steps.assistant.title',
+    bodyKey: 'tour.steps.assistant.body',
+  },
+  {
+    target: '[data-tour="theme"]',
+    titleKey: 'tour.steps.controls.title',
+    bodyKey: 'tour.steps.controls.body',
+  },
+  { titleKey: 'tour.steps.done.title', bodyKey: 'tour.steps.done.body' },
+]
+
+// Persist the "seen" flag only if the user opted out of seeing it again;
+// otherwise the tour reappears on the next visit.
+function onTourFinish(dontShowAgain: boolean): void {
+  if (dontShowAgain) globalThis.localStorage?.setItem(TOUR_KEY, '1')
+}
+function replayTour(): void {
+  menuOpen.value = false
+  showTour.value = true
+}
 
 // Close the menu after navigating (covers link taps, including the active one).
 watch(
@@ -22,7 +85,10 @@ watch(
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') menuOpen.value = false
 }
-onMounted(() => window.addEventListener('keydown', onKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  if (!globalThis.localStorage?.getItem(TOUR_KEY)) showTour.value = true
+})
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
@@ -39,7 +105,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <RouterLink to="/progress">{{ t('nav.progress') }}</RouterLink>
       <RouterLink to="/trainers">{{ t('nav.trainers') }}</RouterLink>
     </nav>
-    <ThemeToggle />
+    <button
+      class="help-btn"
+      type="button"
+      :aria-label="t('tour.replay')"
+      :title="t('tour.replay')"
+      @click="replayTour"
+    >
+      <span aria-hidden="true">?</span>
+    </button>
+    <ThemeToggle data-tour="theme" />
     <LanguageSwitcher />
     <button
       class="nav-toggle"
@@ -52,12 +127,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <span aria-hidden="true">{{ menuOpen ? '✕' : '☰' }}</span>
     </button>
   </header>
-  <main class="app-main">
+  <main class="app-main" data-tour="main">
     <RouterView />
   </main>
 
   <!-- Floating assistant, available on every page -->
   <ChatWidget />
+
+  <!-- First-visit guided tour (replayable from the header "?" button) -->
+  <GuidedTour v-model="showTour" :steps="tourSteps" @finish="onTourFinish" />
 </template>
 
 <style scoped>
@@ -116,6 +194,30 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   to {
     transform: rotate(360deg);
   }
+}
+/* Replay-tour button: circular, matches the theme toggle. */
+.help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.help-btn:hover {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+  box-shadow: var(--glow);
 }
 /* Hamburger button: hidden on desktop, shown on mobile. */
 .nav-toggle {
