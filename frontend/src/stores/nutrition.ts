@@ -10,14 +10,13 @@ import {
 import type { ActivityLevel, Food, NutritionGoal, NutritionTargets } from '@/api/types'
 import { i18n } from '@/i18n'
 
-// Last inputs + result persisted client-side (no login, ADR-0006/0011).
+// Only non-personal preferences are persisted client-side. Biometric data
+// (sex/age/height/weight) is kept in-session only and never written to storage
+// — it's sensitive and, on a no-login app, storing it in clear text adds risk
+// without benefit (CodeQL "clear-text storage"; ADR-0006 privacy stance).
 const KEY = 'muscleapp:nutrition'
 
 interface Persisted {
-  sex: 'male' | 'female' | 'other' | ''
-  age: number | null
-  heightCm: number | null
-  weightKg: number | null
   activity: ActivityLevel
   goal: NutritionGoal
 }
@@ -34,10 +33,11 @@ function load(): Partial<Persisted> {
 
 export const useNutritionStore = defineStore('nutrition', () => {
   const saved = load()
-  const sex = ref<'male' | 'female' | 'other' | ''>(saved.sex ?? '')
-  const age = ref<number | null>(saved.age ?? null)
-  const heightCm = ref<number | null>(saved.heightCm ?? null)
-  const weightKg = ref<number | null>(saved.weightKg ?? null)
+  // Biometric inputs live in-session only (not persisted — see note above).
+  const sex = ref<'male' | 'female' | 'other' | ''>('')
+  const age = ref<number | null>(null)
+  const heightCm = ref<number | null>(null)
+  const weightKg = ref<number | null>(null)
   const activity = ref<ActivityLevel>(saved.activity ?? 'moderate')
   const goal = ref<NutritionGoal>(saved.goal ?? 'maintain')
 
@@ -80,14 +80,7 @@ export const useNutritionStore = defineStore('nutrition', () => {
   }
 
   function persist(): void {
-    const data: Persisted = {
-      sex: sex.value,
-      age: age.value,
-      heightCm: heightCm.value,
-      weightKg: weightKg.value,
-      activity: activity.value,
-      goal: goal.value,
-    }
+    const data: Persisted = { activity: activity.value, goal: goal.value }
     globalThis.localStorage?.setItem(KEY, JSON.stringify(data))
   }
 
