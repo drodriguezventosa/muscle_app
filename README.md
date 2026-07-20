@@ -9,12 +9,19 @@ Aplicación web para explorar los músculos del cuerpo y descubrir qué ejercici
 - 🗺️ **Explorador interactivo** del cuerpo humano (SVG) con figura anatómica, popup por
   grupo muscular y **filtros** (vista frente/espalda, material, nivel) — sin registro.
 - 🎬 Cada ejercicio con **vídeo de ejemplo** (subtítulos en tu idioma) o **pasos** paso a paso.
-- 🤖 **Chatbot** que recomienda ejercicios según tu objetivo, músculo y material disponible.
+- 🤖 **Asistente con IA** (RAG) que recomienda ejercicios según tu objetivo, músculo y material.
+  Es **contextual**: en Nutrición sugiere ideas de comidas del catálogo, y el icono de la
+  burbuja refleja la sección en la que estás.
 - 🏋️ **Generador de rutinas** por objetivo (pérdida de grasa / hipertrofia / fuerza) a partir
   de tus datos (altura, peso, nivel), con IMC.
+- 🍽️ **Nutrición**: calculadora de **calorías y macros** diarios (Mifflin-St Jeor, TDEE, IMC),
+  **catálogo de alimentos** con buscador, **constructor de menú** frente a tus objetivos y
+  **chat de comidas** (RAG) — con aviso de que no sustituye a un dietista-nutricionista.
 - 📈 **Progreso**: registra el peso por ejercicio y sigue tu evolución con sobrecarga
   progresiva (guardado en tu dispositivo).
 - 👤 **Entrenadores** (vista previa): contratar un entrenador y panel para gestionar alumnos.
+- 🧭 **Tutorial guiado** en la primera visita (saltable y repetible desde el botón «?»): recorre
+  y **navega** por cada sección explicándola brevemente.
 - 🌗 **Modo claro/oscuro** y 🌍 **bilingüe** (ES/EN).
 - 🎨 Interfaz **moderna, minimalista y responsive**.
 
@@ -22,7 +29,7 @@ _Auth, suscripciones y entrenadores personales (reales) están planificados como
 
 ## Stack
 
-FastAPI · Vue 3 + Vite · PostgreSQL + pgvector · Ollama/Gemini · Docker
+FastAPI · Vue 3 + Vite · PostgreSQL + pgvector · Groq / Gemini (embeddings) / Ollama · Docker
 
 ## Arranque rápido (desarrollo)
 
