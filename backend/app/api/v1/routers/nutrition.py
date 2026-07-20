@@ -2,12 +2,27 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 
-from app.api.v1.deps import provide_calculate_nutrition, provide_list_foods
-from app.api.v1.schemas.nutrition import FoodRead, NutritionRequest, NutritionTargetsRead
+from app.api.v1.deps import (
+    provide_calculate_nutrition,
+    provide_list_foods,
+    provide_recommend_meals,
+)
+from app.api.v1.schemas.nutrition import (
+    FoodRead,
+    MealRequest,
+    MealResponse,
+    NutritionRequest,
+    NutritionTargetsRead,
+)
 from app.application.dto.nutrition import NutritionTargets
-from app.application.use_cases.nutrition_use_cases import CalculateNutrition, ListFoods
+from app.application.use_cases.nutrition_use_cases import (
+    CalculateNutrition,
+    ListFoods,
+    RecommendMeals,
+)
+from app.core.rate_limit import RATE_LIMIT, limiter
 from app.domain.entities.food import Food
 
 router = APIRouter(prefix="/nutrition", tags=["nutrition"])
@@ -42,3 +57,18 @@ async def list_foods(
 ) -> list[Food]:
     response.headers["Cache-Control"] = _CATALOG_CACHE
     return await use_case.execute()
+
+
+@router.post(
+    "/recommendations",
+    response_model=MealResponse,
+    summary="Suggest meals from a free-text request (RAG over the food catalog)",
+)
+@limiter.limit(RATE_LIMIT)
+async def recommend_meals(
+    request: Request,  # required by slowapi to identify the client
+    payload: MealRequest,
+    use_case: Annotated[RecommendMeals, Depends(provide_recommend_meals)],
+) -> MealResponse:
+    rec = await use_case.execute(payload.message)
+    return MealResponse(reply=rec.reply, foods=list(rec.foods))

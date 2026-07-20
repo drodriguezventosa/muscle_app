@@ -32,6 +32,15 @@ class FoodRead(BaseModel):
     tags: list[str]
 
 
+class MealRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=500)
+
+
+class MealResponse(BaseModel):
+    reply: str
+    foods: list[FoodRead]
+
+
 class NutritionTargetsRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -17,7 +17,11 @@ from app.application.use_cases.muscle_use_cases import (
     ListMuscleExercises,
     ListMuscles,
 )
-from app.application.use_cases.nutrition_use_cases import CalculateNutrition, ListFoods
+from app.application.use_cases.nutrition_use_cases import (
+    CalculateNutrition,
+    ListFoods,
+    RecommendMeals,
+)
 from app.application.use_cases.recommend_exercises import RecommendExercises
 from app.application.use_cases.workout_use_cases import GenerateWorkout
 from app.core.config import get_settings
@@ -88,6 +92,17 @@ def provide_calculate_nutrition() -> CalculateNutrition:
 
 def provide_list_foods(session: SessionDep, locale: LocaleDep) -> ListFoods:
     return ListFoods(SqlAlchemyFoodRepository(session, locale))
+
+
+def provide_recommend_meals(session: SessionDep, locale: LocaleDep) -> RecommendMeals:
+    settings = get_settings()
+    return RecommendMeals(
+        build_embedding(settings),
+        SqlAlchemyFoodRepository(session, locale),
+        build_llm(settings),
+        cache=get_cache(),
+        cache_ttl_seconds=settings.cache_ttl_seconds,
+    )
 
 
 def provide_recommend_exercises(session: SessionDep, locale: LocaleDep) -> RecommendExercises:

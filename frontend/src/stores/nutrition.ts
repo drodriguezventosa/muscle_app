@@ -1,7 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-import { calculateNutrition, listFoods, type NutritionRequest } from '@/api/nutrition'
+import {
+  calculateNutrition,
+  listFoods,
+  recommendMeals,
+  type NutritionRequest,
+} from '@/api/nutrition'
 import type { ActivityLevel, Food, NutritionGoal, NutritionTargets } from '@/api/types'
 import { i18n } from '@/i18n'
 
@@ -46,6 +51,25 @@ export const useNutritionStore = defineStore('nutrition', () => {
       foods.value = await listFoods()
     } catch {
       // catalog is best-effort; the calculator still works without it
+    }
+  }
+
+  // Meal recommendation chat (RAG over the food catalog).
+  const chatReply = ref<string | null>(null)
+  const chatFoods = ref<Food[]>([])
+  const chatLoading = ref(false)
+  async function recommend(message: string): Promise<void> {
+    if (!message.trim()) return
+    chatLoading.value = true
+    try {
+      const rec = await recommendMeals(message)
+      chatReply.value = rec.reply
+      chatFoods.value = rec.foods
+    } catch {
+      chatReply.value = i18n.global.t('nutrition.chat.error')
+      chatFoods.value = []
+    } finally {
+      chatLoading.value = false
     }
   }
 
@@ -99,5 +123,9 @@ export const useNutritionStore = defineStore('nutrition', () => {
     calculate,
     foods,
     loadFoods,
+    chatReply,
+    chatFoods,
+    chatLoading,
+    recommend,
   }
 })

@@ -1,7 +1,8 @@
-"""DTO returned by the nutrition calculation use case."""
+"""DTOs returned by the nutrition use cases."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+from app.domain.entities.food import Food
 from app.domain.value_objects.enums import NutritionGoal
 
 
@@ -20,3 +21,11 @@ class NutritionTargets:
     goal: NutritionGoal  # effective goal (may differ from requested, see warning)
     # Optional i18n key when a safeguard adjusted the result, else None.
     warning: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class MealRecommendation:
+    """A nutrition chatbot reply plus the foods it is grounded on."""
+
+    reply: str
+    foods: tuple[Food, ...] = field(default_factory=tuple)

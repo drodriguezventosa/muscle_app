@@ -76,6 +76,14 @@ export default {
       remove: 'Quitar',
       ofTarget: '{n}% de tu objetivo',
     },
+    chat: {
+      title: 'Pide ideas de comidas',
+      lead: 'Describe tu objetivo y recibe alimentos del catálogo para montar una comida.',
+      placeholder: 'p. ej. desayuno vegetariano alto en proteína',
+      ask: 'Preguntar',
+      thinking: 'Pensando…',
+      error: 'No se pudieron obtener sugerencias. Inténtalo de nuevo.',
+    },
     bmiCategory: {
       underweight: 'bajo peso',
       normal: 'peso normal',

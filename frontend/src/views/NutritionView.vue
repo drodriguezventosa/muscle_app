@@ -39,6 +39,12 @@ function removeItem(index: number): void {
   menu.splice(index, 1)
 }
 
+// Meal recommendation chat (RAG over foods).
+const chatInput = ref('')
+function ask(): void {
+  void store.recommend(chatInput.value)
+}
+
 const totals = computed(() => {
   const acc = { kcal: 0, protein: 0, carbs: 0, fat: 0 }
   for (const { food, grams } of menu) {
@@ -209,6 +215,28 @@ const totals = computed(() => {
         </div>
       </div>
       <p v-else class="hint">{{ t('nutrition.menu.empty') }}</p>
+    </div>
+
+    <!-- Meal recommendation chat (RAG) -->
+    <div class="card glass animate-in" style="animation-delay: 0.24s">
+      <h2 class="mb-title">{{ t('nutrition.chat.title') }}</h2>
+      <p class="mb-lead">{{ t('nutrition.chat.lead') }}</p>
+      <form class="chat-form" @submit.prevent="ask">
+        <input v-model="chatInput" type="text" :placeholder="t('nutrition.chat.placeholder')" />
+        <button type="submit" class="calc" :disabled="store.chatLoading">
+          {{ store.chatLoading ? t('nutrition.chat.thinking') : t('nutrition.chat.ask') }}
+        </button>
+      </form>
+      <p v-if="store.chatReply" class="chat-reply">{{ store.chatReply }}</p>
+      <ul v-if="store.chatFoods.length" class="foods">
+        <li v-for="f in store.chatFoods" :key="f.id">
+          <button type="button" class="food" @click="addFood(f)">
+            <span class="food-name">{{ f.name }}</span>
+            <span class="food-kcal">{{ f.kcal }} {{ t('nutrition.menu.per100') }}</span>
+            <span class="add" aria-hidden="true">+</span>
+          </button>
+        </li>
+      </ul>
     </div>
   </section>
 </template>
@@ -497,5 +525,22 @@ select:focus {
 }
 .totals .vs {
   color: var(--color-accent);
+}
+.chat-form {
+  display: flex;
+  gap: var(--space-sm);
+}
+.chat-form input {
+  flex: 1;
+}
+.chat-form .calc {
+  width: auto;
+  white-space: nowrap;
+}
+.chat-reply {
+  margin: 0;
+  white-space: pre-line;
+  color: var(--color-text);
+  font-size: 0.92rem;
 }
 </style>

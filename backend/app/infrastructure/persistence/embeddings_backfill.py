@@ -14,6 +14,23 @@ from app.domain.ports.ai import EmbeddingPort
 from app.infrastructure.ai.factory import build_embedding
 from app.infrastructure.persistence.database import get_session_factory
 from app.infrastructure.persistence.models.exercise import ExerciseModel
+from app.infrastructure.persistence.models.food import FoodModel
+
+
+async def backfill_food_embeddings(session: AsyncSession, embedding: EmbeddingPort) -> int:
+    """Embed foods missing a vector (name + category, both languages). Returns count."""
+    result = await session.scalars(select(FoodModel).where(FoodModel.embedding.is_(None)))
+    models = list(result)
+    if not models:
+        return 0
+    texts = [
+        " ".join(filter(None, [m.name, m.name_en, m.category, *(m.tags or [])])) for m in models
+    ]
+    vectors = await embedding.embed_many(texts)
+    for model, vector in zip(models, vectors, strict=True):
+        model.embedding = vector
+    await session.commit()
+    return len(models)
 
 
 async def backfill_embeddings(session: AsyncSession, embedding: EmbeddingPort) -> int:

@@ -16,10 +16,8 @@ interface FoodPayload {
   tags: string[]
 }
 
-export async function listFoods(): Promise<Food[]> {
-  const lang = i18n.global.locale.value
-  const p = await api.get<FoodPayload[]>(`/nutrition/foods?lang=${lang}`)
-  return p.map((f) => ({
+function toFood(f: FoodPayload): Food {
+  return {
     id: f.id,
     name: f.name,
     category: f.category,
@@ -28,7 +26,27 @@ export async function listFoods(): Promise<Food[]> {
     carbsG: f.carbs_g,
     fatG: f.fat_g,
     tags: f.tags,
-  }))
+  }
+}
+
+export async function listFoods(): Promise<Food[]> {
+  const lang = i18n.global.locale.value
+  const p = await api.get<FoodPayload[]>(`/nutrition/foods?lang=${lang}`)
+  return p.map(toFood)
+}
+
+export interface MealRecommendation {
+  reply: string
+  foods: Food[]
+}
+
+export async function recommendMeals(message: string): Promise<MealRecommendation> {
+  const lang = i18n.global.locale.value
+  const p = await api.post<{ reply: string; foods: FoodPayload[] }>(
+    `/nutrition/recommendations?lang=${lang}`,
+    { message },
+  )
+  return { reply: p.reply, foods: p.foods.map(toFood) }
 }
 
 export interface NutritionRequest {

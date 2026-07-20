@@ -76,3 +76,36 @@ async def test_list_foods_returns_catalog() -> None:
     result = await ListFoods(_FakeFoodRepo([food])).execute()  # type: ignore[arg-type]
     assert result[0].name == "Egg"
     assert result[0].category == "protein"
+
+
+async def test_recommend_meals_grounds_reply_on_retrieved_foods() -> None:
+    from app.application.use_cases.nutrition_use_cases import RecommendMeals
+    from app.domain.entities.food import Food
+    from app.infrastructure.ai.embeddings import FakeEmbedding
+    from app.infrastructure.ai.llm import StubLLM
+
+    foods = [
+        Food(
+            id=1,
+            name="Chicken breast",
+            category="protein",
+            kcal=165,
+            protein_g=31,
+            carbs_g=0,
+            fat_g=4,
+        )
+    ]
+    rec = await RecommendMeals(FakeEmbedding(384), _FakeFoodRepo(foods), StubLLM()).execute(
+        "protein"
+    )
+    assert rec.foods[0].name == "Chicken breast"
+    assert "no es consejo" in rec.reply.lower()
+
+
+async def test_recommend_meals_empty_message_returns_no_foods() -> None:
+    from app.application.use_cases.nutrition_use_cases import RecommendMeals
+    from app.infrastructure.ai.embeddings import FakeEmbedding
+    from app.infrastructure.ai.llm import StubLLM
+
+    rec = await RecommendMeals(FakeEmbedding(384), _FakeFoodRepo([]), StubLLM()).execute("   ")
+    assert rec.foods == ()

@@ -76,6 +76,14 @@ export default {
       remove: 'Remove',
       ofTarget: '{n}% of your target',
     },
+    chat: {
+      title: 'Ask for meal ideas',
+      lead: 'Describe your goal and get foods from the catalog to build a meal.',
+      placeholder: 'e.g. high-protein vegetarian breakfast',
+      ask: 'Ask',
+      thinking: 'Thinking…',
+      error: 'Could not get suggestions. Try again.',
+    },
     bmiCategory: {
       underweight: 'underweight',
       normal: 'normal weight',
