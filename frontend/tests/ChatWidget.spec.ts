@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -28,5 +28,12 @@ describe('ChatWidget', () => {
 
     await wrapper.get('[data-testid="chat-close"]').trigger('click')
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+  })
+
+  it('mirrors the current section on the closed bubble', async () => {
+    await router.push('/nutrition')
+    await flushPromises()
+    const wrapper = mount(ChatWidget, { global: { plugins: [i18n, router] } })
+    expect(wrapper.get('[data-testid="chat-toggle"]').text()).toContain('🍗')
   })
 })
