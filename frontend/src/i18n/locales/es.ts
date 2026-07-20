@@ -233,6 +233,8 @@ export default {
   },
   chat: {
     title: 'Asistente',
+    mealIntro: 'Cuéntame tu objetivo y te sugiero alimentos para una comida.',
+    mealPlaceholder: 'p. ej. desayuno vegetariano alto en proteína',
     intro: 'Pregunta qué quieres entrenar y te recomiendo ejercicios.',
     placeholder: 'p. ej. entrenar pecho en casa',
     inputLabel: 'Tu consulta',

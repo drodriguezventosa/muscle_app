@@ -41,7 +41,7 @@ function toggle(): void {
       :aria-label="t('chat.open')"
       @click="toggle"
     >
-      <span class="bubble-icon">{{ open ? '✕' : '💬' }}</span>
+      <span class="bubble-icon">{{ open ? '✕' : '🤖' }}</span>
     </button>
   </div>
 </template>

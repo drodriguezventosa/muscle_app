@@ -233,6 +233,8 @@ export default {
   chat: {
     title: 'Assistant',
     intro: 'Ask what you want to train and I will recommend exercises.',
+    mealIntro: 'Tell me your goal and I will suggest foods for a meal.',
+    mealPlaceholder: 'e.g. high-protein vegetarian breakfast',
     placeholder: 'e.g. train chest at home',
     inputLabel: 'Your question',
     open: 'Open the recommendation assistant',
