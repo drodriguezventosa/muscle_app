@@ -1,11 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import ChatBot from '@/components/ChatBot.vue'
 
 const { t } = useI18n()
+const route = useRoute()
 const open = ref(false)
+
+// The closed bubble mirrors the current section so it feels part of the page;
+// unknown routes fall back to the generic assistant icon.
+const SECTION_ICONS: Record<string, string> = {
+  '/': '💪',
+  '/workouts': '🏋️',
+  '/nutrition': '🍗',
+  '/progress': '📈',
+  '/trainers': '🧑‍🏫',
+}
+const bubbleIcon = computed(() => SECTION_ICONS[route.path] ?? '🤖')
 
 function toggle(): void {
   open.value = !open.value
@@ -41,7 +54,7 @@ function toggle(): void {
       :aria-label="t('chat.open')"
       @click="toggle"
     >
-      <span class="bubble-icon">{{ open ? '✕' : '🤖' }}</span>
+      <span class="bubble-icon">{{ open ? '✕' : bubbleIcon }}</span>
     </button>
   </div>
 </template>
