@@ -50,4 +50,11 @@ Consulta [`CONTRIBUTING.md`](CONTRIBUTING.md) y las skills en [`.claude/skills/`
 
 ## Licencia
 
-[MIT](LICENSE)
+Publicado bajo la **[PolyForm Noncommercial License 1.0.0](LICENSE)**: puedes usarlo,
+estudiarlo, modificarlo y compartirlo **con fines no comerciales** (uso personal,
+educativo, investigación, ONG e instituciones públicas). **El uso comercial no está
+permitido** salvo autorización expresa del autor.
+
+Es una licencia _source-available_ (no es «open source» según la OSI, ya que restringe
+el uso comercial). © 2026 Daniel Rodríguez Ventosa — para licencias comerciales,
+contacta con el autor.
