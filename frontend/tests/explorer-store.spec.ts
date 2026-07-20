@@ -57,6 +57,21 @@ describe('explorer store', () => {
     expect(store.loading).toBe(false)
   })
 
+  it('ignores re-selecting the muscle already shown, but refetches when forced', async () => {
+    vi.mocked(getMuscleExercises).mockResolvedValue(exercises)
+    const store = useExplorerStore()
+    await store.selectMuscle('chest')
+    expect(getMuscleExercises).toHaveBeenCalledTimes(1)
+
+    // Re-clicking the same muscle is a no-op (prevents the layout-thrash ghost).
+    await store.selectMuscle('chest')
+    expect(getMuscleExercises).toHaveBeenCalledTimes(1)
+
+    // A forced refetch (e.g. locale/filter change) does re-query.
+    await store.selectMuscle('chest', true)
+    expect(getMuscleExercises).toHaveBeenCalledTimes(2)
+  })
+
   it('sets an error message when exercise loading fails', async () => {
     vi.mocked(getMuscleExercises).mockRejectedValue(new Error('network'))
     const store = useExplorerStore()

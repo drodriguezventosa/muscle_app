@@ -19,7 +19,8 @@ onMounted(() => {
 watch(locale, () => {
   void store.loadMuscles()
   if (store.selectedSvgId) {
-    void store.selectMuscle(store.selectedSvgId)
+    // Force: same muscle, but its exercises must be re-fetched in the new locale.
+    void store.selectMuscle(store.selectedSvgId, true)
   }
 })
 </script>
