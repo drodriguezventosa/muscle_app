@@ -126,6 +126,55 @@ class GeminiEmbedding(EmbeddingPort):
             raise EmbeddingUnavailableError("gemini batch embedding request failed") from exc
 
 
+class JinaEmbedding(EmbeddingPort):
+    """Real embeddings via Jina AI's free-tier REST API.
+
+    Chosen because Google's free tier rejects datacenter egress IPs with
+    `FAILED_PRECONDITION: User location is not supported` (ADR-0019), which broke
+    the deployed assistant. Jina accepts cloud IPs and supports Matryoshka
+    truncation via `dimensions`, so it returns `dim`-sized vectors and the
+    existing pgvector column stays unchanged.
+    """
+
+    _ENDPOINT = "https://api.jina.ai/v1/embeddings"
+    # Symmetric task: catalog rows and user queries are embedded the same way, so
+    # cosine distance stays meaningful between them.
+    _TASK = "text-matching"
+
+    def __init__(self, api_key: str, model: str, dim: int) -> None:
+        self._api_key = api_key
+        self._model = model
+        self._dim = dim
+
+    async def _post(self, texts: list[str]) -> list[list[float]]:
+        payload = {
+            "model": self._model,
+            "input": texts,
+            "task": self._TASK,
+            "dimensions": self._dim,
+            "normalized": True,
+            "embedding_type": "float",
+        }
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        try:
+            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+                response = await client.post(self._ENDPOINT, headers=headers, json=payload)
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPError as exc:
+            _log_embedding_error("jina", exc)
+            raise EmbeddingUnavailableError("jina embedding request failed") from exc
+        # The API may return items out of order, so sort by the echoed index.
+        rows = sorted(data["data"], key=lambda row: row["index"])
+        return [_normalize([float(x) for x in row["embedding"]]) for row in rows]
+
+    async def embed(self, text: str) -> list[float]:
+        return (await self._post([text]))[0]
+
+    async def embed_many(self, texts: list[str]) -> list[list[float]]:
+        return await self._post(texts)
+
+
 class SentenceTransformerEmbedding(EmbeddingPort):
     """Real embeddings via sentence-transformers (requires the `.[ai]` extra)."""
 

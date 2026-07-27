@@ -5,6 +5,7 @@ from app.domain.ports.ai import EmbeddingPort, LLMPort
 from app.infrastructure.ai.embeddings import (
     FakeEmbedding,
     GeminiEmbedding,
+    JinaEmbedding,
     SentenceTransformerEmbedding,
 )
 from app.infrastructure.ai.llm import GeminiLLM, GroqLLM, OllamaLLM, StubLLM
@@ -13,6 +14,8 @@ from app.infrastructure.ai.llm import GeminiLLM, GroqLLM, OllamaLLM, StubLLM
 def build_embedding(settings: Settings) -> EmbeddingPort:
     if settings.embedding_provider == "sentence_transformers":
         return SentenceTransformerEmbedding(settings.embedding_model)
+    if settings.embedding_provider == "jina":
+        return JinaEmbedding(settings.jina_api_key, settings.jina_model, settings.embedding_dim)
     if settings.embedding_provider == "gemini":
         return GeminiEmbedding(
             settings.gemini_api_key, settings.gemini_embedding_model, settings.embedding_dim
