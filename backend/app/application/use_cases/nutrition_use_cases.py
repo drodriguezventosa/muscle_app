@@ -8,11 +8,16 @@ person, and a hard minimum-calorie floor.
 import hashlib
 import json
 
-from app.application.dto.nutrition import MealRecommendation, NutritionTargets
+from app.application.dto.nutrition import (
+    MealPhotoEstimate,
+    MealRecommendation,
+    NutritionTargets,
+)
 from app.domain.entities.food import Food
 from app.domain.ports.ai import EmbeddingPort, EmbeddingUnavailableError, LLMPort
 from app.domain.ports.cache import CachePort
 from app.domain.ports.repositories import FoodRepository
+from app.domain.ports.vision import VisionPort, VisionUnavailableError
 from app.domain.value_objects.enums import ActivityLevel, NutritionGoal
 
 # Activity multipliers over BMR (standard Mifflin-St Jeor companions).
@@ -193,3 +198,57 @@ class RecommendMeals:
     @staticmethod
     def _ensure_disclaimer(reply: str) -> str:
         return reply if _NUTRITION_DISCLAIMER in reply else f"{reply}\n\n{_NUTRITION_DISCLAIMER}"
+
+
+# Shown with every photo estimate: portions from a 2D image are approximate, and
+# the user is expected to adjust the grams afterwards.
+_PHOTO_NOTE = (
+    "Estimación aproximada a partir de la foto: ajusta los gramos de cada alimento. "
+    + _NUTRITION_DISCLAIMER
+)
+_PHOTO_NO_FOOD = "No he reconocido alimentos en la foto. Prueba con otra imagen o añádelos a mano."
+_PHOTO_UNAVAILABLE = (
+    "No se pudo analizar la foto ahora mismo. Inténtalo más tarde o añade los alimentos a mano."
+)
+
+# Accepted upload types: what a phone camera or gallery produces.
+ALLOWED_IMAGE_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "image/heic"})
+
+
+class ImageTooLargeError(ValueError):
+    """The uploaded image exceeds the configured size limit."""
+
+
+class UnsupportedImageTypeError(ValueError):
+    """The uploaded file is not one of the accepted image types."""
+
+
+class AnalyzeMealPhoto:
+    """Estimate the foods in a meal photo so they can be added to the menu.
+
+    The image is never persisted: it is validated, sent to the vision provider and
+    dropped. A provider outage degrades to an empty, flagged result instead of an
+    error (same contract as the RAG use cases, see ADR-0018).
+    """
+
+    def __init__(self, vision: VisionPort, max_image_bytes: int) -> None:
+        self._vision = vision
+        self._max_image_bytes = max_image_bytes
+
+    async def execute(self, image: bytes, mime_type: str) -> MealPhotoEstimate:
+        normalized = (mime_type or "").split(";")[0].strip().lower()
+        if normalized not in ALLOWED_IMAGE_TYPES:
+            raise UnsupportedImageTypeError(normalized or "unknown")
+        if not image:
+            raise UnsupportedImageTypeError("empty")
+        if len(image) > self._max_image_bytes:
+            raise ImageTooLargeError(f"{len(image)} > {self._max_image_bytes}")
+
+        try:
+            items = await self._vision.analyze_meal(image, normalized)
+        except VisionUnavailableError:
+            return MealPhotoEstimate(items=(), note=_PHOTO_UNAVAILABLE, available=False)
+
+        if not items:
+            return MealPhotoEstimate(items=(), note=_PHOTO_NO_FOOD)
+        return MealPhotoEstimate(items=tuple(items), note=_PHOTO_NOTE)

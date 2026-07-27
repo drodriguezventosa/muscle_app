@@ -3,7 +3,9 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import HealthDisclaimer from '@/components/HealthDisclaimer.vue'
-import type { ActivityLevel, Food, NutritionGoal } from '@/api/types'
+import MealPhotoCapture from '@/components/MealPhotoCapture.vue'
+import { analyzeMealPhoto } from '@/api/nutrition'
+import type { ActivityLevel, EstimatedFood, Food, NutritionGoal } from '@/api/types'
 import { useNutritionStore } from '@/stores/nutrition'
 
 const { t, locale } = useI18n()
@@ -66,6 +68,49 @@ const totals = computed(() => {
     fat: Math.round(acc.fat),
   }
 })
+
+// --- Meal photo -> editable menu items -------------------------------------
+const photoLoading = ref(false)
+const photoNote = ref<string | null>(null)
+const photoError = ref<string | null>(null)
+// Photo-estimated foods are not catalog rows, so they get their own negative ids
+// (the menu is keyed by food id, and catalog ids are positive).
+let estimatedId = 0
+
+/** Store AI totals as per-100 g values so editing grams rescales macros as usual. */
+function toMenuItem(estimate: EstimatedFood): MenuItem {
+  const per100 = (total: number) => (estimate.grams > 0 ? (total / estimate.grams) * 100 : 0)
+  estimatedId -= 1
+  return {
+    food: {
+      id: estimatedId,
+      name: estimate.name,
+      category: 'photo',
+      emoji: '📷',
+      kcal: per100(estimate.kcal),
+      proteinG: per100(estimate.proteinG),
+      carbsG: per100(estimate.carbsG),
+      fatG: per100(estimate.fatG),
+      tags: [],
+    },
+    grams: Math.round(estimate.grams),
+  }
+}
+
+async function onPhoto(blob: Blob): Promise<void> {
+  photoLoading.value = true
+  photoError.value = null
+  photoNote.value = null
+  try {
+    const result = await analyzeMealPhoto(blob)
+    photoNote.value = result.note
+    menu.push(...result.items.map(toMenuItem))
+  } catch {
+    photoError.value = t('nutrition.photo.error')
+  } finally {
+    photoLoading.value = false
+  }
+}
 
 function pct(current: number, target: number | undefined): number | null {
   return target && target > 0 ? Math.round((current / target) * 100) : null
@@ -192,6 +237,16 @@ const kcalPct = computed(() => pct(totals.value.kcal, store.result?.calories))
         type="search"
         :placeholder="t('nutrition.menu.search')"
       />
+      <!-- Photo → estimated foods, added as normal (editable) menu items -->
+      <div class="photo-block">
+        <MealPhotoCapture @captured="onPhoto" />
+        <p v-if="photoLoading" class="photo-msg" role="status">
+          {{ t('nutrition.photo.analyzing') }}
+        </p>
+        <p v-else-if="photoError" class="photo-msg error" role="alert">{{ photoError }}</p>
+        <p v-else-if="photoNote" class="photo-msg" role="status">{{ photoNote }}</p>
+      </div>
+
       <ul class="foods">
         <li v-for="f in filteredFoods" :key="f.id">
           <button type="button" class="food" @click="addFood(f)">
@@ -447,6 +502,21 @@ select:focus {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.9rem;
+}
+.photo-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px dashed var(--color-border);
+}
+.photo-msg {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+.photo-msg.error {
+  color: var(--color-danger);
 }
 .foods {
   list-style: none;

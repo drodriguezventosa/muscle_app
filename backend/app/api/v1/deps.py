@@ -18,6 +18,7 @@ from app.application.use_cases.muscle_use_cases import (
     ListMuscles,
 )
 from app.application.use_cases.nutrition_use_cases import (
+    AnalyzeMealPhoto,
     CalculateNutrition,
     ListFoods,
     RecommendMeals,
@@ -26,7 +27,7 @@ from app.application.use_cases.recommend_exercises import RecommendExercises
 from app.application.use_cases.workout_use_cases import GenerateWorkout
 from app.core.config import get_settings
 from app.domain.ports.cache import CachePort
-from app.infrastructure.ai.factory import build_embedding, build_llm
+from app.infrastructure.ai.factory import build_embedding, build_llm, build_vision
 from app.infrastructure.cache.factory import build_cache
 from app.infrastructure.persistence.database import get_session
 from app.infrastructure.persistence.repositories.exercise_repository import (
@@ -92,6 +93,11 @@ def provide_calculate_nutrition() -> CalculateNutrition:
 
 def provide_list_foods(session: SessionDep, locale: LocaleDep) -> ListFoods:
     return ListFoods(SqlAlchemyFoodRepository(session, locale))
+
+
+def provide_analyze_meal_photo() -> AnalyzeMealPhoto:
+    settings = get_settings()
+    return AnalyzeMealPhoto(build_vision(settings), settings.vision_max_image_bytes)
 
 
 def provide_recommend_meals(session: SessionDep, locale: LocaleDep) -> RecommendMeals:

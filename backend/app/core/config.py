@@ -54,9 +54,11 @@ class Settings(BaseSettings):
     llm_model: str = "llama3.1"
     ollama_base_url: str = "http://ollama:11434"
     gemini_api_key: str = ""
-    # gemini-2.0-flash: GA, free tier, no "thinking" → a stable single-text
-    # response, unlike 2.5-flash whose thinking parts break naive parsing.
-    gemini_model: str = "gemini-2.0-flash"
+    # Kept current on purpose: measured 2026-07-27, gemini-2.0-flash answers 429
+    # (its free-tier quota is gone) and gemini-2.5-flash 404s (retired). The
+    # flash-lite line is alive and fast, and the adapter already tolerates
+    # "thinking" parts. Production chat runs on Groq; this is for local use.
+    gemini_model: str = "gemini-3.1-flash-lite"
     # Groq: OpenAI-compatible free tier (no card). Chat LLM for deploy, because
     # Gemini's free chat quota is too low (embeddings stay on Gemini).
     groq_api_key: str = ""
@@ -84,6 +86,16 @@ class Settings(BaseSettings):
     # because vectors from different models are not comparable. Keep it false
     # normally (a rebuild costs one API call per catalog row).
     embedding_rebuild: bool = False
+
+    # ---- Vision (meal photo → estimated foods) ----
+    # "stub" is deterministic and needs no service (default, dev/CI); "gemini"
+    # calls the multimodal API. NOTE: Google's free tier is unreachable from
+    # datacenter IPs (ADR-0019), so "gemini" works locally but not on Render.
+    vision_provider: Literal["stub", "gemini"] = "stub"
+    vision_model: str = "gemini-3.1-flash-lite"
+    # Upload guardrail: plenty for a phone photo, small enough to bound memory
+    # and the provider's token cost.
+    vision_max_image_bytes: int = 5 * 1024 * 1024
 
     # ---- Cache ----
     # "memory" is in-process and zero-setup (default); "redis" uses an external

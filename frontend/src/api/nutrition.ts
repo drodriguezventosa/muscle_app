@@ -2,7 +2,7 @@
 // personal data stays out of URLs.
 
 import { api } from './client'
-import type { ActivityLevel, Food, NutritionGoal, NutritionTargets } from './types'
+import type { ActivityLevel, EstimatedFood, Food, NutritionGoal, NutritionTargets } from './types'
 import { i18n } from '@/i18n'
 
 interface FoodPayload {
@@ -93,5 +93,48 @@ export async function calculateNutrition(req: NutritionRequest): Promise<Nutriti
     bmiCategory: p.bmi_category,
     goal: p.goal,
     warning: p.warning,
+  }
+}
+
+interface EstimatedFoodPayload {
+  name: string
+  grams: number
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+}
+
+interface MealPhotoPayload {
+  items: EstimatedFoodPayload[]
+  note: string
+  available: boolean
+}
+
+export interface MealPhotoEstimate {
+  items: EstimatedFood[]
+  note: string
+  available: boolean
+}
+
+/** Send a meal photo and get the foods it contains, with estimated portions. */
+export async function analyzeMealPhoto(
+  photo: Blob,
+  filename = 'meal.jpg',
+): Promise<MealPhotoEstimate> {
+  const form = new FormData()
+  form.append('photo', photo, filename)
+  const p = await api.upload<MealPhotoPayload>('/nutrition/photo', form)
+  return {
+    note: p.note,
+    available: p.available,
+    items: p.items.map((i) => ({
+      name: i.name,
+      grams: i.grams,
+      kcal: i.kcal,
+      proteinG: i.protein_g,
+      carbsG: i.carbs_g,
+      fatG: i.fat_g,
+    })),
   }
 }

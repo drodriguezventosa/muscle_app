@@ -14,9 +14,15 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // FormData must keep the browser's own multipart Content-Type (it carries the
+  // boundary), so the JSON default is only applied to non-form bodies.
+  const isForm = init?.body instanceof FormData
   const response = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
     ...init,
+    headers: {
+      ...(isForm ? {} : { 'Content-Type': 'application/json' }),
+      ...(init?.headers ?? {}),
+    },
   })
   if (!response.ok) {
     throw new ApiError(response.status, `Request to ${path} failed`)
@@ -28,4 +34,5 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+  upload: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', body: form }),
 }

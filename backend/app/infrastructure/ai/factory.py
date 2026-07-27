@@ -2,6 +2,7 @@
 
 from app.core.config import Settings
 from app.domain.ports.ai import EmbeddingPort, LLMPort
+from app.domain.ports.vision import VisionPort
 from app.infrastructure.ai.embeddings import (
     FakeEmbedding,
     GeminiEmbedding,
@@ -9,6 +10,7 @@ from app.infrastructure.ai.embeddings import (
     SentenceTransformerEmbedding,
 )
 from app.infrastructure.ai.llm import GeminiLLM, GroqLLM, OllamaLLM, StubLLM
+from app.infrastructure.ai.vision import GeminiVision, StubVision
 
 
 def build_embedding(settings: Settings) -> EmbeddingPort:
@@ -21,6 +23,12 @@ def build_embedding(settings: Settings) -> EmbeddingPort:
             settings.gemini_api_key, settings.gemini_embedding_model, settings.embedding_dim
         )
     return FakeEmbedding(settings.embedding_dim)
+
+
+def build_vision(settings: Settings) -> VisionPort:
+    if settings.vision_provider == "gemini":
+        return GeminiVision(settings.gemini_api_key, settings.vision_model)
+    return StubVision()
 
 
 def build_llm(settings: Settings) -> LLMPort:

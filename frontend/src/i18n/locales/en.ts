@@ -114,6 +114,16 @@ export default {
     goal: { lose_fat: 'Lose fat', maintain: 'Maintain', gain_muscle: 'Gain muscle' },
     macros: { protein: 'Protein', carbs: 'Carbs', fat: 'Fat' },
     macroAbbr: { protein: 'P', carbs: 'C', fat: 'F' },
+    photo: {
+      take: 'Take a photo',
+      upload: 'Upload a photo',
+      shoot: 'Capture',
+      cancel: 'Cancel',
+      starting: 'Opening the camera…',
+      analyzing: 'Analysing the photo…',
+      cameraError: 'Could not open the camera. Check permissions or upload a photo instead.',
+      error: 'Could not analyse the photo. Try again or add the foods manually.',
+    },
     menu: {
       title: 'Build a menu',
       lead: 'Add foods and see how the day adds up against your targets.',
