@@ -59,7 +59,7 @@ describe('NutritionView meal photo', () => {
     expect(wrapper.find('.menu-item').exists()).toBe(false)
   })
 
-  it('shows a spinner and blocks the buttons while the photo is analysed', async () => {
+  it('blocks the buttons while the photo is analysed, with no extra status line', async () => {
     // Keep the request pending so the loading state is observable.
     let resolve!: (value: unknown) => void
     analyzeMealPhoto.mockReturnValue(new Promise((r) => (resolve = r)))
@@ -70,16 +70,17 @@ describe('NutritionView meal photo', () => {
     capture.vm.$emit('captured', new Blob(['x']))
     await flushPromises()
 
-    expect(wrapper.find('.photo-msg.loading .spinner').exists()).toBe(true)
     expect(capture.props('busy')).toBe(true)
     expect(capture.findAll('button').every((b) => b.attributes('disabled') !== undefined)).toBe(
       true,
     )
+    // The spinner belongs to the pressed button; no duplicated message below.
+    expect(wrapper.find('.photo-msg').exists()).toBe(false)
 
     resolve({ note: 'listo', available: true, items: [] })
     await flushPromises()
 
-    expect(wrapper.find('.spinner').exists()).toBe(false)
     expect(capture.props('busy')).toBe(false)
+    expect(wrapper.find('.cap-spinner').exists()).toBe(false)
   })
 })

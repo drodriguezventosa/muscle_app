@@ -19,6 +19,8 @@ const JPEG_QUALITY = 0.85
 
 const open = ref(false)
 const starting = ref(false)
+// Which button produced the photo, so the busy state is shown on that one.
+const source = ref<'camera' | 'upload' | null>(null)
 const error = ref<string | null>(null)
 const video = ref<HTMLVideoElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -74,12 +76,20 @@ function shoot(): void {
   canvas.getContext('2d')?.drawImage(el, 0, 0, canvas.width, canvas.height)
   canvas.toBlob(
     (blob) => {
-      if (blob) emit('captured', blob)
+      if (blob) {
+        source.value = 'camera'
+        emit('captured', blob)
+      }
       close()
     },
     'image/jpeg',
     JPEG_QUALITY,
   )
+}
+
+/** True while the parent analyses a photo that came from this button. */
+function busyOn(which: 'camera' | 'upload'): boolean {
+  return props.busy && source.value === which
 }
 
 function pickFile(): void {
@@ -89,7 +99,12 @@ function pickFile(): void {
 function onFile(event: Event): void {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (file) emit('captured', file)
+  if (file) {
+    // The picker is also reachable from the camera modal's error state, but the
+    // photo came from a file either way.
+    source.value = 'upload'
+    emit('captured', file)
+  }
   input.value = '' // allow re-picking the same file
   close()
 }
@@ -104,12 +119,14 @@ onBeforeUnmount(stop)
 <template>
   <div class="capture">
     <button type="button" class="cap-btn primary" :disabled="props.busy" @click="start">
-      <span v-if="props.busy" class="cap-spinner" aria-hidden="true"></span>
+      <span v-if="busyOn('camera')" class="cap-spinner" aria-hidden="true"></span>
       <span v-else aria-hidden="true">📷</span>
-      {{ props.busy ? t('nutrition.photo.analyzing') : t('nutrition.photo.take') }}
+      {{ busyOn('camera') ? t('nutrition.photo.analyzing') : t('nutrition.photo.take') }}
     </button>
     <button type="button" class="cap-btn" :disabled="props.busy" @click="pickFile">
-      <span aria-hidden="true">🖼️</span> {{ t('nutrition.photo.upload') }}
+      <span v-if="busyOn('upload')" class="cap-spinner on-light" aria-hidden="true"></span>
+      <span v-else aria-hidden="true">🖼️</span>
+      {{ busyOn('upload') ? t('nutrition.photo.analyzing') : t('nutrition.photo.upload') }}
     </button>
     <!-- `capture` hints the rear camera on mobile when used as the fallback -->
     <input
@@ -196,6 +213,11 @@ onBeforeUnmount(stop)
   border-top-color: #06121a;
   border-radius: 50%;
   animation: cap-rotate 0.7s linear infinite;
+}
+/* Same spinner on the secondary (light) button, tinted with the accent. */
+.cap-spinner.on-light {
+  border-color: var(--color-border);
+  border-top-color: var(--color-accent);
 }
 @keyframes cap-rotate {
   to {

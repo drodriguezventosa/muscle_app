@@ -233,13 +233,13 @@ const kcalPct = computed(() => pct(totals.value.kcal, store.result?.calories))
       <p class="mb-lead">{{ t('nutrition.menu.lead') }}</p>
       <!-- Photo → estimated foods, added as normal (editable) menu items -->
       <div class="photo-block">
+        <!-- The busy state lives on the button that was pressed, so there is no
+             separate "analysing…" line here. -->
         <MealPhotoCapture :busy="photoLoading" @captured="onPhoto" />
-        <p v-if="photoLoading" class="photo-msg loading" role="status">
-          <span class="spinner" aria-hidden="true"></span>
-          {{ t('nutrition.photo.analyzing') }}
+        <p v-if="photoError" class="photo-msg error" role="alert">{{ photoError }}</p>
+        <p v-else-if="photoNote && !photoLoading" class="photo-msg" role="status">
+          {{ photoNote }}
         </p>
-        <p v-else-if="photoError" class="photo-msg error" role="alert">{{ photoError }}</p>
-        <p v-else-if="photoNote" class="photo-msg" role="status">{{ photoNote }}</p>
       </div>
 
       <ul class="foods">
@@ -516,34 +516,8 @@ select:focus {
   color: var(--color-muted);
   font-size: 0.82rem;
 }
-.photo-msg.loading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
 .photo-msg.error {
   color: var(--color-danger);
-}
-/* Small indeterminate spinner: an accent arc spinning over a faint ring. */
-.spinner {
-  display: inline-block;
-  flex: none;
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--color-border);
-  border-top-color: var(--color-accent);
-  border-radius: 50%;
-  animation: spinner-rotate 0.7s linear infinite;
-}
-@keyframes spinner-rotate {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .spinner {
-    animation-duration: 2s;
-  }
 }
 .foods {
   list-style: none;
