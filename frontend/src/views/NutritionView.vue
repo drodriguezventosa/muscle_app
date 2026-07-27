@@ -386,21 +386,11 @@ label {
   color: var(--color-muted);
   min-width: 0;
 }
+/* Look and focus ring come from the shared form baseline in styles.css. */
 input,
 select {
   width: 100%;
   min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-input);
-  color: var(--color-text);
-  font: inherit;
-}
-input:focus,
-select:focus {
-  outline: none;
-  border-color: var(--color-accent);
 }
 .calc {
   padding: 12px 16px;
@@ -617,14 +607,6 @@ select:focus {
   flex: none;
   padding-left: 8px;
   padding-right: 8px;
-  /* Hide the number spinner: its arrows overlapped the value ("100" -> "10("). */
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-.mi-grams input::-webkit-outer-spin-button,
-.mi-grams input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
 }
 .mi-kcal {
   flex: none;

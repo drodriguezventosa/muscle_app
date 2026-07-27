@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import ChatWidget from '@/components/ChatWidget.vue'
 import GuidedTour, { type TourStep } from '@/components/GuidedTour.vue'
+import LoginModal from '@/components/LoginModal.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
 // Mobile navigation menu (hamburger). Hidden on desktop via CSS.
 const menuOpen = ref(false)
@@ -71,6 +75,13 @@ const tourSteps: TourStep[] = [
 function onTourFinish(dontShowAgain: boolean): void {
   if (dontShowAgain) globalThis.localStorage?.setItem(TOUR_KEY, '1')
 }
+// Signing out leaves the role-specific areas behind, so go back to the public
+// entry point instead of staying on a page the user can no longer use.
+async function signOut(): Promise<void> {
+  auth.signOut()
+  await router.push('/')
+}
+
 function replayTour(): void {
   menuOpen.value = false
   showTour.value = true
@@ -103,8 +114,26 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <RouterLink to="/workouts">{{ t('nav.workouts') }}</RouterLink>
       <RouterLink to="/nutrition">{{ t('nav.nutrition') }}</RouterLink>
       <RouterLink to="/progress">{{ t('nav.progress') }}</RouterLink>
-      <RouterLink to="/trainers">{{ t('nav.trainers') }}</RouterLink>
+      <!-- A trainer manages students; everyone else browses trainers. -->
+      <RouterLink v-if="auth.isTrainer" to="/students">{{ t('nav.students') }}</RouterLink>
+      <RouterLink v-else to="/trainers">{{ t('nav.trainers') }}</RouterLink>
     </nav>
+    <!-- Session state: who is signed in, and a way out. -->
+    <button
+      v-if="auth.isSignedIn"
+      class="session-btn"
+      type="button"
+      :title="auth.user?.email"
+      @click="signOut"
+    >
+      <span aria-hidden="true">{{ auth.isTrainer ? '🧑‍🏫' : '🏋️' }}</span>
+      <span class="session-name">{{ auth.user?.name }}</span>
+      <span class="session-out">{{ t('auth.signOut') }}</span>
+    </button>
+    <button v-else class="session-btn" type="button" @click="auth.promptSignIn()">
+      <span aria-hidden="true">👤</span>
+      <span class="session-name">{{ t('auth.signIn') }}</span>
+    </button>
     <button
       class="help-btn"
       type="button"
@@ -133,6 +162,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
   <!-- Floating assistant, available on every page -->
   <ChatWidget />
+
+  <!-- Sign-in lives in a modal, opened from the header or by the route guard -->
+  <LoginModal v-model="auth.promptOpen" />
 
   <!-- First-visit guided tour (replayable from the header "?" button) -->
   <GuidedTour v-model="showTour" :steps="tourSteps" @finish="onTourFinish" />
@@ -193,6 +225,36 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+.session-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.82rem;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.session-btn:hover {
+  border-color: var(--color-accent);
+}
+.session-out {
+  color: var(--color-muted);
+  border-left: 1px solid var(--color-border);
+  padding-left: var(--space-xs);
+}
+/* Hide the name on narrow screens; the icon still identifies the role. */
+@media (max-width: 900px) {
+  .session-name,
+  .session-out {
+    display: none;
   }
 }
 /* Replay-tour button: circular, matches the theme toggle. */

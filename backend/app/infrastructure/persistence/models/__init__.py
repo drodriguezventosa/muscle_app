@@ -8,6 +8,7 @@ from app.infrastructure.persistence.models.base import EMBEDDING_DIM, Base
 from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
 from app.infrastructure.persistence.models.food import FoodModel
 from app.infrastructure.persistence.models.muscle import MuscleModel
+from app.infrastructure.persistence.models.user import UserModel
 
 __all__ = [
     "EMBEDDING_DIM",
@@ -16,4 +17,5 @@ __all__ = [
     "ExerciseMuscleModel",
     "FoodModel",
     "MuscleModel",
+    "UserModel",
 ]

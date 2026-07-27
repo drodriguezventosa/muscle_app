@@ -79,3 +79,10 @@ class DietTag(StrEnum):
     VEGAN = "vegan"
     GLUTEN_FREE = "gluten_free"
     HIGH_PROTEIN = "high_protein"
+
+
+class UserRole(StrEnum):
+    """What a signed-in user may do. Trainers see their students' data."""
+
+    CLIENT = "client"
+    TRAINER = "trainer"
