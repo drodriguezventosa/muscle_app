@@ -1,7 +1,17 @@
 # 18. Surviving embedding-model retirement (gemini-embedding-2 + graceful degradation)
 
-- Status: accepted
+- Status: accepted (context corrected — see the update below)
 - Date: 2026-07-27
+
+> **Update (2026-07-27, same day): the root cause below was wrong.** The logging
+> added by this ADR revealed the real error from the deployed service:
+> `400 FAILED_PRECONDITION — "User location is not supported for the API use"`.
+> Both `gemini-embedding-001` and `gemini-embedding-2` answer fine from a
+> residential IP with the same key, so the model was never the problem: Google's
+> **free tier rejects datacenter egress IPs**. See
+> [ADR-0019](0019-embeddings-provider-jina.md) for the actual fix. Everything this
+> ADR decided still stands (the graceful degradation is what kept the app up, and
+> `001` does have an announced shutdown), but it did not restore semantic search.
 
 ## Context
 

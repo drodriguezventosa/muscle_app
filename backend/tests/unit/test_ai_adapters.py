@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from app.domain.ports.ai import EmbeddingUnavailableError
-from app.infrastructure.ai.embeddings import FakeEmbedding, GeminiEmbedding
+from app.infrastructure.ai.embeddings import FakeEmbedding, GeminiEmbedding, JinaEmbedding
 from app.infrastructure.ai.llm import _FALLBACK, GeminiLLM, GroqLLM, StubLLM
 
 
@@ -161,3 +161,45 @@ async def test_gemini_embedding_raises_unavailable_on_http_error(
         await adapter.embed("chest at home")
     with pytest.raises(EmbeddingUnavailableError):
         await adapter.embed_many(["a", "b"])
+
+
+async def test_jina_embedding_returns_normalized_vectors_in_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Jina echoes an `index` per item and may return them out of order.
+    payload = {
+        "data": [
+            {"index": 1, "embedding": [0.0, 2.0]},
+            {"index": 0, "embedding": [3.0, 0.0]},
+        ]
+    }
+    seen: dict[str, object] = {}
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        seen["url"] = url
+        seen["json"] = kwargs["json"]
+        seen["headers"] = kwargs["headers"]
+        return httpx.Response(200, json=payload, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    vectors = await JinaEmbedding("k", "jina-embeddings-v3", dim=2).embed_many(["a", "b"])
+
+    assert vectors == [[1.0, 0.0], [0.0, 1.0]]  # reordered by index and L2-normalized
+    assert seen["url"] == "https://api.jina.ai/v1/embeddings"
+    body = seen["json"]
+    assert isinstance(body, dict)
+    assert body["dimensions"] == 2  # Matryoshka truncation keeps the pgvector column
+    assert body["input"] == ["a", "b"]
+
+
+async def test_jina_embedding_raises_unavailable_on_http_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        return httpx.Response(
+            429, json={"detail": "rate limited"}, request=httpx.Request("POST", url)
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    with pytest.raises(EmbeddingUnavailableError):
+        await JinaEmbedding("k", "jina-embeddings-v3", dim=4).embed("hola")

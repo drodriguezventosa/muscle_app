@@ -25,7 +25,7 @@ services:
       - key: DB_SSL
         value: "true"
       - key: EMBEDDING_PROVIDER
-        value: gemini
+        value: jina
       # One-shot operational switch, so it is dashboard-managed (`sync: false`):
       # a blueprint `value:` would overwrite the dashboard on the next sync.
       # Set it to "true" for ONE deploy after changing the embedding model — the
@@ -49,11 +49,18 @@ services:
         sync: false
       - key: POSTGRES_DB
         sync: false
-      - key: GEMINI_API_KEY # Google AI Studio (free) — used for embeddings
+      # jina.ai (free tier, no card) — embeddings. Google's free tier rejects
+      # datacenter egress IPs ("User location is not supported"), see ADR-0019.
+      - key: JINA_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY # Google AI Studio (free) — kept for local/dev use
         sync: false
       - key: GROQ_API_KEY # console.groq.com (free, no card) — chat LLM
         sync: false
-      - key: REDIS_URL # Upstash (free, no card) — rediss://… ; empty ⇒ in-memory cache
+      # Upstash (free, no card). MUST be rediss:// (TLS): a plain redis:// URL
+      # fails to connect and the cache silently degrades to no cache.
+      # Empty ⇒ in-memory cache.
+      - key: REDIS_URL
         sync: false
       - key: CORS_ORIGINS # your Vercel URL, e.g. https://muscleapp.vercel.app
         sync: false

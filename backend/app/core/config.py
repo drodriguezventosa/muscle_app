@@ -63,10 +63,11 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.3-70b-versatile"
 
     # ---- Embeddings ----
-    # "fake" is deterministic and dependency-free (default); "gemini" uses Google's
-    # free embedding API (real vectors, no local model — fits small free hosts);
-    # "sentence_transformers" gives real vectors but needs the `.[ai]` extra (torch).
-    embedding_provider: Literal["fake", "gemini", "sentence_transformers"] = "fake"
+    # "fake" is deterministic and dependency-free (default); "jina" is the deploy
+    # default (free tier, works from datacenter IPs — see ADR-0019); "gemini" also
+    # works but its free tier rejects cloud egress IPs; "sentence_transformers"
+    # gives real vectors locally but needs the `.[ai]` extra (torch).
+    embedding_provider: Literal["fake", "jina", "gemini", "sentence_transformers"] = "fake"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     # Gemini embedding model (reuses `gemini_api_key`); truncated to embedding_dim.
     # gemini-embedding-001 was shut down by Google on 2026-07-14; gemini-embedding-2
@@ -74,6 +75,10 @@ class Settings(BaseSettings):
     # pgvector column stays as is. See docs/adr/0018-embedding-model-migration.md.
     gemini_embedding_model: str = "gemini-embedding-2"
     embedding_dim: int = 384
+    # Jina AI (free tier, no card): reuses `embedding_dim` via Matryoshka
+    # truncation, so switching provider needs no schema change.
+    jina_api_key: str = ""
+    jina_model: str = "jina-embeddings-v3"
     # One-shot switch: clear the stored catalog vectors at boot so they are
     # recomputed with the current model. Needed after changing embedding model,
     # because vectors from different models are not comparable. Keep it false
