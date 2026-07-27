@@ -97,12 +97,12 @@ async def analyze_meal_photo(
     except ImageTooLargeError as exc:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="La imagen es demasiado grande.",
+            detail="Image too large",
         ) from exc
     except UnsupportedImageTypeError as exc:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Formato de imagen no admitido (usa JPEG, PNG o WebP).",
+            detail="Unsupported image type (use JPEG, PNG or WebP)",
         ) from exc
     return MealPhotoResponse(
         items=list(estimate.items), note=estimate.note, available=estimate.available
