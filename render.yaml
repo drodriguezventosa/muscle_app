@@ -36,6 +36,11 @@ services:
         sync: false
       - key: LLM_PROVIDER
         value: groq
+      # Meal-photo analysis. openrouter is the only free option reachable from a
+      # datacenter IP (Gemini's free tier refuses them, Groq has no vision model).
+      # Slower than Gemini (~16s vs ~2s) — see ADR-0020.
+      - key: VISION_PROVIDER
+        value: openrouter
       - key: CACHE_PROVIDER
         value: redis
       # --- Set these in the Render dashboard (Environment); never committed ---
@@ -52,6 +57,8 @@ services:
       # jina.ai (free tier, no card) — embeddings. Google's free tier rejects
       # datacenter egress IPs ("User location is not supported"), see ADR-0019.
       - key: JINA_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY # openrouter.ai (free tier, no card) — meal photos
         sync: false
       - key: GEMINI_API_KEY # Google AI Studio (free) — kept for local/dev use
         sync: false

@@ -10,7 +10,7 @@ from app.infrastructure.ai.embeddings import (
     SentenceTransformerEmbedding,
 )
 from app.infrastructure.ai.llm import GeminiLLM, GroqLLM, OllamaLLM, StubLLM
-from app.infrastructure.ai.vision import GeminiVision, StubVision
+from app.infrastructure.ai.vision import GeminiVision, OpenRouterVision, StubVision
 
 
 def build_embedding(settings: Settings) -> EmbeddingPort:
@@ -26,6 +26,8 @@ def build_embedding(settings: Settings) -> EmbeddingPort:
 
 
 def build_vision(settings: Settings) -> VisionPort:
+    if settings.vision_provider == "openrouter":
+        return OpenRouterVision(settings.openrouter_api_key, settings.openrouter_vision_model)
     if settings.vision_provider == "gemini":
         return GeminiVision(settings.gemini_api_key, settings.vision_model)
     return StubVision()
