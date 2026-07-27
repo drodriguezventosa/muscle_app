@@ -12,6 +12,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.use_cases.auth_use_cases import AuthenticateUser, GetAuthenticatedUser
+from app.application.use_cases.coaching_use_cases import (
+    GetOwnProgress,
+    GetStudentDashboard,
+    ListStudents,
+    SyncProgress,
+)
 from app.application.use_cases.exercise_use_cases import GetExercise
 from app.application.use_cases.muscle_use_cases import (
     GetMuscle,
@@ -34,6 +40,9 @@ from app.domain.ports.cache import CachePort
 from app.infrastructure.ai.factory import build_embedding, build_llm, build_vision
 from app.infrastructure.cache.factory import build_cache
 from app.infrastructure.persistence.database import get_session
+from app.infrastructure.persistence.repositories.coaching_repository import (
+    SqlAlchemyCoachingRepository,
+)
 from app.infrastructure.persistence.repositories.exercise_repository import (
     SqlAlchemyExerciseRepository,
 )
@@ -139,6 +148,22 @@ def provide_authenticate_user(session: SessionDep) -> AuthenticateUser:
         Argon2Hasher(),
         JwtTokenService(settings.jwt_secret, settings.jwt_expire_minutes),
     )
+
+
+def provide_list_students(session: SessionDep) -> ListStudents:
+    return ListStudents(SqlAlchemyCoachingRepository(session))
+
+
+def provide_student_dashboard(session: SessionDep, locale: LocaleDep) -> GetStudentDashboard:
+    return GetStudentDashboard(SqlAlchemyCoachingRepository(session, locale))
+
+
+def provide_get_own_progress(session: SessionDep, locale: LocaleDep) -> GetOwnProgress:
+    return GetOwnProgress(SqlAlchemyCoachingRepository(session, locale))
+
+
+def provide_sync_progress(session: SessionDep) -> SyncProgress:
+    return SyncProgress(SqlAlchemyCoachingRepository(session))
 
 
 async def get_current_user(
