@@ -16,6 +16,10 @@ from app.infrastructure.persistence.database import get_session_factory
 from app.infrastructure.persistence.models.exercise import ExerciseModel
 from app.infrastructure.persistence.models.food import FoodModel
 
+# Commit in small batches so a provider hiccup (free-tier rate limits) keeps the
+# progress made so far: only rows still missing a vector are retried next run.
+_BATCH_SIZE = 20
+
 
 async def backfill_food_embeddings(session: AsyncSession, embedding: EmbeddingPort) -> int:
     """Embed foods missing a vector (name + category, both languages). Returns count."""
@@ -23,14 +27,18 @@ async def backfill_food_embeddings(session: AsyncSession, embedding: EmbeddingPo
     models = list(result)
     if not models:
         return 0
-    texts = [
-        " ".join(filter(None, [m.name, m.name_en, m.category, *(m.tags or [])])) for m in models
-    ]
-    vectors = await embedding.embed_many(texts)
-    for model, vector in zip(models, vectors, strict=True):
-        model.embedding = vector
-    await session.commit()
-    return len(models)
+    done = 0
+    for start in range(0, len(models), _BATCH_SIZE):
+        batch = models[start : start + _BATCH_SIZE]
+        texts = [
+            " ".join(filter(None, [m.name, m.name_en, m.category, *(m.tags or [])])) for m in batch
+        ]
+        vectors = await embedding.embed_many(texts)
+        for model, vector in zip(batch, vectors, strict=True):
+            model.embedding = vector
+        await session.commit()
+        done += len(batch)
+    return done
 
 
 async def backfill_embeddings(session: AsyncSession, embedding: EmbeddingPort) -> int:
@@ -40,16 +48,20 @@ async def backfill_embeddings(session: AsyncSession, embedding: EmbeddingPort) -
     if not models:
         return 0
 
-    # Embed both languages so semantic search works regardless of query locale.
-    texts = [
-        " ".join(filter(None, [model.name, model.name_en, model.description, model.description_en]))
-        for model in models
-    ]
-    vectors = await embedding.embed_many(texts)
-    for model, vector in zip(models, vectors, strict=True):
-        model.embedding = vector
-    await session.commit()
-    return len(models)
+    done = 0
+    for start in range(0, len(models), _BATCH_SIZE):
+        batch = models[start : start + _BATCH_SIZE]
+        # Embed both languages so semantic search works regardless of query locale.
+        texts = [
+            " ".join(filter(None, [m.name, m.name_en, m.description, m.description_en]))
+            for m in batch
+        ]
+        vectors = await embedding.embed_many(texts)
+        for model, vector in zip(batch, vectors, strict=True):
+            model.embedding = vector
+        await session.commit()
+        done += len(batch)
+    return done
 
 
 async def _main() -> None:

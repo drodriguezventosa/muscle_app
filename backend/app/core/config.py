@@ -69,8 +69,16 @@ class Settings(BaseSettings):
     embedding_provider: Literal["fake", "gemini", "sentence_transformers"] = "fake"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     # Gemini embedding model (reuses `gemini_api_key`); truncated to embedding_dim.
-    gemini_embedding_model: str = "gemini-embedding-001"
+    # gemini-embedding-001 was shut down by Google on 2026-07-14; gemini-embedding-2
+    # is its replacement and supports flexible dimensions (128-3072), so the 384-dim
+    # pgvector column stays as is. See docs/adr/0018-embedding-model-migration.md.
+    gemini_embedding_model: str = "gemini-embedding-2"
     embedding_dim: int = 384
+    # One-shot switch: clear the stored catalog vectors at boot so they are
+    # recomputed with the current model. Needed after changing embedding model,
+    # because vectors from different models are not comparable. Keep it false
+    # normally (a rebuild costs one API call per catalog row).
+    embedding_rebuild: bool = False
 
     # ---- Cache ----
     # "memory" is in-process and zero-setup (default); "redis" uses an external

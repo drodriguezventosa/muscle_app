@@ -109,3 +109,29 @@ async def test_recommend_meals_empty_message_returns_no_foods() -> None:
 
     rec = await RecommendMeals(FakeEmbedding(384), _FakeFoodRepo([]), StubLLM()).execute("   ")
     assert rec.foods == ()
+
+
+async def test_recommend_meals_falls_back_to_catalog_when_embeddings_fail() -> None:
+    # Mirrors the exercise chat: an embedding outage must not 500 the request.
+    from app.application.use_cases.nutrition_use_cases import RecommendMeals
+    from app.domain.entities.food import Food
+    from app.domain.ports.ai import EmbeddingPort, EmbeddingUnavailableError
+    from app.infrastructure.ai.llm import StubLLM
+
+    class _DownEmbedding(EmbeddingPort):
+        async def embed(self, text: str) -> list[float]:
+            raise EmbeddingUnavailableError("provider down")
+
+        async def embed_many(self, texts: list[str]) -> list[list[float]]:
+            raise EmbeddingUnavailableError("provider down")
+
+    foods = [
+        Food(id=1, name="Oats", category="carbs", kcal=389, protein_g=17, carbs_g=66, fat_g=7),
+        Food(id=2, name="Tuna", category="protein", kcal=132, protein_g=28, carbs_g=0, fat_g=1),
+    ]
+    rec = await RecommendMeals(_DownEmbedding(), _FakeFoodRepo(foods), StubLLM()).execute(  # type: ignore[arg-type]
+        "desayuno alto en proteina"
+    )
+
+    assert [f.name for f in rec.foods] == ["Oats", "Tuna"]  # catalog fallback, not empty
+    assert "no es consejo" in rec.reply.lower()

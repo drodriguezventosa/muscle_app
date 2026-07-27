@@ -74,6 +74,19 @@ class ExerciseRepository(ABC):
         (equipment, difficulty) narrow the search before ranking by similarity.
         """
 
+    @abstractmethod
+    async def list_catalog(
+        self,
+        limit: int,
+        equipment: Equipment | None = None,
+        difficulty: Difficulty | None = None,
+    ) -> list[Exercise]:
+        """Return catalog exercises matching the optional filters, unranked.
+
+        Structured (no embeddings) fallback for when semantic search is
+        unavailable, so a recommendation can still be grounded in real data.
+        """
+
 
 class FoodRepository(ABC):
     """Read access to the nutrition food catalog."""

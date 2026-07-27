@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.value_objects.enums import MuscleRole
+from app.domain.value_objects.enums import Difficulty, Equipment, MuscleRole
 from app.infrastructure.persistence.repositories.exercise_repository import (
     SqlAlchemyExerciseRepository,
 )
@@ -60,3 +60,21 @@ async def test_exercise_repository_lists_for_muscle(session: AsyncSession) -> No
     assert push_up.works_muscle(chest.id)
     primary = [tm for tm in push_up.targeted_muscles if tm.role is MuscleRole.PRIMARY]
     assert any(tm.muscle_id == chest.id for tm in primary)
+
+
+async def test_exercise_repository_list_catalog_applies_filters(session: AsyncSession) -> None:
+    # Non-vector fallback used when the embedding provider is unavailable: it must
+    # return real rows (no embedding required) and honour the structured filters.
+    await seed(session)
+    repo = SqlAlchemyExerciseRepository(session)
+
+    everything = await repo.list_catalog(limit=5)
+    assert 0 < len(everything) <= 5
+
+    filtered = await repo.list_catalog(limit=10, equipment=Equipment.BODYWEIGHT)
+    assert filtered
+    assert all(e.equipment == Equipment.BODYWEIGHT for e in filtered)
+
+    by_level = await repo.list_catalog(limit=10, difficulty=Difficulty.BEGINNER)
+    assert by_level
+    assert all(e.difficulty == Difficulty.BEGINNER for e in by_level)

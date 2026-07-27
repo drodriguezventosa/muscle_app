@@ -24,3 +24,4 @@ sequentially; supersede rather than edit past decisions.
 | [0015](0015-performance-caching-and-keepalive.md) | Performance & resilience on free tiers: keep-alive + caching | accepted |
 | [0016](0016-nutrition-module.md) | Nutrition module (calculator + food catalog + RAG meal chat) | accepted |
 | [0017](0017-onboarding-guided-tour.md) | Onboarding guided tour and section-aware assistant | accepted |
+| [0018](0018-embedding-model-migration.md) | Surviving embedding-model retirement (gemini-embedding-2 + graceful degradation) | accepted |

@@ -10,7 +10,7 @@ import json
 
 from app.application.dto.nutrition import MealRecommendation, NutritionTargets
 from app.domain.entities.food import Food
-from app.domain.ports.ai import EmbeddingPort, LLMPort
+from app.domain.ports.ai import EmbeddingPort, EmbeddingUnavailableError, LLMPort
 from app.domain.ports.cache import CachePort
 from app.domain.ports.repositories import FoodRepository
 from app.domain.value_objects.enums import ActivityLevel, NutritionGoal
@@ -149,8 +149,14 @@ class RecommendMeals:
             return MealRecommendation(
                 reply="Cuéntame tu objetivo o qué alimentos te interesan. " + _NUTRITION_DISCLAIMER
             )
-        vector = await self._embed(clean)
-        foods = await self._foods.search_similar(vector, limit)
+        # Same graceful degradation as the exercise chat: if embeddings are
+        # unavailable, ground the reply on the catalog instead of failing.
+        try:
+            vector = await self._embed(clean)
+            foods = await self._foods.search_similar(vector, limit)
+        except EmbeddingUnavailableError:
+            foods = (await self._foods.list_all())[:limit]
+
         reply = await self._llm.generate(_MEALS_SYSTEM_PROMPT, self._build_prompt(clean, foods))
         return MealRecommendation(reply=self._ensure_disclaimer(reply), foods=tuple(foods))
 

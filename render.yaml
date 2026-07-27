@@ -26,6 +26,14 @@ services:
         value: "true"
       - key: EMBEDDING_PROVIDER
         value: gemini
+      # One-shot operational switch, so it is dashboard-managed (`sync: false`):
+      # a blueprint `value:` would overwrite the dashboard on the next sync.
+      # Set it to "true" for ONE deploy after changing the embedding model — the
+      # stored catalog vectors are cleared and recomputed, because vectors from
+      # different models are not comparable — then set it back to "false".
+      # Unset behaves as false (see Settings.embedding_rebuild).
+      - key: EMBEDDING_REBUILD
+        sync: false
       - key: LLM_PROVIDER
         value: groq
       - key: CACHE_PROVIDER

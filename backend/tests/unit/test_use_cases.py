@@ -66,6 +66,14 @@ class FakeExerciseRepository(ExerciseRepository):
     ) -> list[Exercise]:
         return self._exercises[:limit]
 
+    async def list_catalog(
+        self,
+        limit: int,
+        equipment: Equipment | None = None,
+        difficulty: Difficulty | None = None,
+    ) -> list[Exercise]:
+        return self._exercises[:limit]
+
 
 @pytest.fixture
 def muscles() -> list[Muscle]:

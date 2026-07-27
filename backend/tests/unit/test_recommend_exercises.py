@@ -2,7 +2,7 @@
 
 from app.application.use_cases.recommend_exercises import DISCLAIMER, RecommendExercises
 from app.domain.entities.exercise import Exercise
-from app.domain.ports.ai import EmbeddingPort
+from app.domain.ports.ai import EmbeddingPort, EmbeddingUnavailableError
 from app.domain.ports.repositories import ExerciseRepository
 from app.domain.value_objects.enums import Difficulty, Equipment
 from app.infrastructure.ai.embeddings import FakeEmbedding
@@ -44,6 +44,15 @@ class RecordingExerciseRepository(ExerciseRepository):
             "equipment": equipment,
             "difficulty": difficulty,
         }
+        return self._exercises[:limit]
+
+    async def list_catalog(
+        self,
+        limit: int,
+        equipment: Equipment | None = None,
+        difficulty: Difficulty | None = None,
+    ) -> list[Exercise]:
+        self.last_call = {"catalog": True, "limit": limit}
         return self._exercises[:limit]
 
 
@@ -101,3 +110,25 @@ async def test_passes_filters_and_query_embedding_to_search() -> None:
         "equipment": Equipment.BARBELL,
         "difficulty": Difficulty.ADVANCED,
     }
+
+
+class UnavailableEmbedding(EmbeddingPort):
+    """Stands in for a provider outage / retired model / exhausted quota."""
+
+    async def embed(self, text: str) -> list[float]:
+        raise EmbeddingUnavailableError("provider down")
+
+    async def embed_many(self, texts: list[str]) -> list[list[float]]:
+        raise EmbeddingUnavailableError("provider down")
+
+
+async def test_falls_back_to_catalog_when_embeddings_are_unavailable() -> None:
+    # The request must still succeed with real exercises (it used to 500).
+    repo = RecordingExerciseRepository(EXERCISES)
+    use_case = RecommendExercises(UnavailableEmbedding(), repo, StubLLM())
+
+    recommendation = await use_case.execute("entrenar pecho en casa")
+
+    assert recommendation.exercises  # grounded on catalog data, not empty
+    assert repo.last_call == {"catalog": True, "limit": 5}  # non-vector path used
+    assert DISCLAIMER in recommendation.reply
