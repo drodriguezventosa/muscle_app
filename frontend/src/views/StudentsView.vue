@@ -1,89 +1,97 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
-import CheckoutModal from '@/components/CheckoutModal.vue'
-import { TRAINERS, type Trainer } from '@/data/coaching'
-import { useAuthStore } from '@/stores/auth'
-import { useSubscriptionsStore } from '@/stores/subscriptions'
+import { ASSIGNABLE, STUDENTS, type Student } from '@/data/coaching'
+import { useCoachingStore } from '@/stores/coaching'
 
+// Trainer-only area (the route is guarded): the people this coach follows.
+// The evolution charts land here in the next phase, once the coaching tables
+// hold real history.
 const { t } = useI18n()
-const auth = useAuthStore()
-const subs = useSubscriptionsStore()
-
-const hiring = ref<Trainer | null>(null)
-
-// Browsing the trainers is open to everyone; hiring one is what needs an
-// account, which is exactly the moment worth asking for one.
-function hire(trainer: Trainer): void {
-  if (auth.isSignedIn) hiring.value = trainer
-  else auth.promptSignIn('/trainers')
-}
+const coaching = useCoachingStore()
+const selected = ref<Student | null>(null)
 </script>
 
 <template>
   <section class="trainers">
     <header class="intro animate-in">
-      <p class="eyebrow">
-        {{ t('trainers.eyebrow') }} <span class="preview">{{ t('trainers.preview') }}</span>
-      </p>
+      <p class="eyebrow">{{ t('students.eyebrow') }}</p>
       <h1>
-        <span class="gradient-text">{{ t('trainers.titleHighlight') }}</span>
-        {{ t('trainers.titleRest') }}
+        <span class="gradient-text">{{ t('students.titleHighlight') }}</span>
+        {{ t('students.titleRest') }}
       </h1>
-      <p class="lead">{{ t('trainers.lead') }}</p>
+      <p class="lead">{{ t('students.lead') }}</p>
     </header>
 
-    <!-- A trainer has their own area; point them there instead of hiring. -->
-    <p v-if="auth.isTrainer" class="notice animate-in">
-      {{ t('trainers.youAreTrainer') }}
-      <RouterLink to="/students">{{ t('trainers.goToStudents') }}</RouterLink>
-    </p>
-    <!-- Anyone can browse; hiring is what asks for an account. -->
-    <p v-else-if="!auth.isSignedIn" class="notice animate-in">{{ t('trainers.signInToHire') }}</p>
-
-    <!-- Hire a trainer -->
-    <ul class="cards">
-      <li v-for="tr in TRAINERS" :key="tr.id" class="card glass">
-        <div class="avatar" aria-hidden="true">{{ tr.initials }}</div>
-        <h2 class="name">{{ tr.name }}</h2>
-        <span class="badge">{{ t(`goal.${tr.specialty}`) }}</span>
-        <p class="rating">★ {{ tr.rating.toFixed(1) }}</p>
-        <p class="price">
-          {{ tr.pricePerMonth }} € <span>{{ t('trainers.perMonth') }}</span>
-        </p>
-        <template v-if="subs.isActive(tr.id)">
-          <p class="active-badge">✓ {{ t('trainers.active') }}</p>
-          <button type="button" class="cancel" @click="subs.cancel(tr.id)">
-            {{ t('trainers.cancel') }}
+    <!-- Coach dashboard -->
+    <div class="coach">
+      <ul class="students">
+        <li v-for="st in STUDENTS" :key="st.id">
+          <button
+            type="button"
+            class="student"
+            :class="{ on: selected?.id === st.id }"
+            @click="selected = st"
+          >
+            <span class="avatar sm" aria-hidden="true">{{ st.initials }}</span>
+            <span class="student-info">
+              <span class="student-name">{{ st.name }}</span>
+              <span class="student-meta">
+                {{ t(`goal.${st.goal}`) }} · {{ t(`difficulty.${st.level}`) }} ·
+                {{ t('trainers.lastActive', { n: st.lastActiveDays }) }}
+              </span>
+            </span>
           </button>
-        </template>
-        <button v-else type="button" class="hire" @click="hire(tr)">
-          {{ auth.isSignedIn ? t('trainers.hire') : t('trainers.hireSignIn') }}
-        </button>
-      </li>
-    </ul>
+        </li>
+      </ul>
 
-    <!-- Hire flow: simulated payment gateway (no real charge) -->
-    <CheckoutModal v-if="hiring" :trainer="hiring" @close="hiring = null" />
+      <div class="detail glass">
+        <p v-if="!selected" class="hint">{{ t('trainers.selectStudent') }}</p>
+        <template v-else>
+          <h2 class="detail-name">{{ selected.name }}</h2>
+
+          <h3 class="section">{{ t('trainers.studentProgress') }}</h3>
+          <ul class="progress-list">
+            <li v-for="p in selected.progress" :key="p.exercise" class="progress-row">
+              <span class="ex">{{ p.exercise }}</span>
+              <span class="stat"
+                >{{ t('trainers.best') }} {{ p.best }} kg · {{ p.sessions }}
+                {{ t('trainers.sessions') }}</span
+              >
+            </li>
+          </ul>
+
+          <h3 class="section">
+            {{ t('trainers.assign') }}
+            <span class="assigned">{{
+              t('trainers.assignedCount', { n: coaching.assigned(selected.id).length })
+            }}</span>
+          </h3>
+          <div class="assignables">
+            <label
+              v-for="ex in ASSIGNABLE"
+              :key="ex"
+              class="assignable"
+              :class="{ on: coaching.assigned(selected.id).includes(ex) }"
+            >
+              <input
+                type="checkbox"
+                :checked="coaching.assigned(selected.id).includes(ex)"
+                @change="coaching.toggle(selected.id, ex)"
+              />
+              <span class="box" aria-hidden="true"></span>
+              <span class="ex-name">{{ ex }}</span>
+            </label>
+          </div>
+          <p class="note">{{ t('trainers.assignNote') }}</p>
+        </template>
+      </div>
+    </div>
   </section>
 </template>
 
 <style scoped>
-.notice {
-  margin: 0;
-  padding: 10px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-muted);
-  font-size: 0.86rem;
-}
-.notice a {
-  color: var(--color-accent);
-  font-weight: 600;
-}
 .trainers {
   display: flex;
   flex-direction: column;
@@ -331,12 +339,74 @@ h1 {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: var(--space-xs);
 }
+/* Each option is a selectable chip: the whole row is the hit area, and the
+   native checkbox stays in the DOM (keyboard + screen readers) but hidden. */
 .assignable {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
   font-size: 0.85rem;
   cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+.assignable:hover {
+  border-color: var(--color-accent);
+}
+.assignable.on {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+.assignable input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.box {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface-strong);
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+/* Checkmark drawn with a rotated rectangle, so no icon font is needed. */
+.box::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid transparent;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: border-color 0.18s ease;
+}
+.assignable.on .box {
+  background: var(--gradient);
+  border-color: transparent;
+}
+.assignable.on .box::after {
+  border-color: #06121a;
+}
+.assignable input:focus-visible + .box {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.ex-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .note {
   margin: var(--space-sm) 0 0;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import ChatWidget from '@/components/ChatWidget.vue'
@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 
 // Mobile navigation menu (hamburger). Hidden on desktop via CSS.
@@ -74,6 +75,13 @@ const tourSteps: TourStep[] = [
 function onTourFinish(dontShowAgain: boolean): void {
   if (dontShowAgain) globalThis.localStorage?.setItem(TOUR_KEY, '1')
 }
+// Signing out leaves the role-specific areas behind, so go back to the public
+// entry point instead of staying on a page the user can no longer use.
+async function signOut(): Promise<void> {
+  auth.signOut()
+  await router.push('/')
+}
+
 function replayTour(): void {
   menuOpen.value = false
   showTour.value = true
@@ -106,7 +114,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <RouterLink to="/workouts">{{ t('nav.workouts') }}</RouterLink>
       <RouterLink to="/nutrition">{{ t('nav.nutrition') }}</RouterLink>
       <RouterLink to="/progress">{{ t('nav.progress') }}</RouterLink>
-      <RouterLink to="/trainers">{{ t('nav.trainers') }}</RouterLink>
+      <!-- A trainer manages students; everyone else browses trainers. -->
+      <RouterLink v-if="auth.isTrainer" to="/students">{{ t('nav.students') }}</RouterLink>
+      <RouterLink v-else to="/trainers">{{ t('nav.trainers') }}</RouterLink>
     </nav>
     <!-- Session state: who is signed in, and a way out. -->
     <button
@@ -114,7 +124,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       class="session-btn"
       type="button"
       :title="auth.user?.email"
-      @click="auth.signOut()"
+      @click="signOut"
     >
       <span aria-hidden="true">{{ auth.isTrainer ? '🧑‍🏫' : '🏋️' }}</span>
       <span class="session-name">{{ auth.user?.name }}</span>

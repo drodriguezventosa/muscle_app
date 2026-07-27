@@ -162,6 +162,55 @@ a {
   animation: fade-in-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* --- Form controls -------------------------------------------------------
+   Shared baseline so every field looks the same wherever it lives. Views may
+   still override size or width; this only sets the look and the focus ring. */
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='number'],
+input[type='search'],
+select {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-input);
+  color: var(--color-text);
+  font: inherit;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+input[type='text']:hover,
+input[type='email']:hover,
+input[type='password']:hover,
+input[type='number']:hover,
+input[type='search']:hover,
+select:hover {
+  border-color: var(--color-accent-soft);
+}
+input[type='text']:focus,
+input[type='email']:focus,
+input[type='password']:focus,
+input[type='number']:focus,
+input[type='search']:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+/* Native number spinners look dated and clip the value in narrow fields; the
+   min/max constraints still apply, and arrow keys still step the value. */
+input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

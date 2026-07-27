@@ -27,6 +27,13 @@ export const router = createRouter({
       component: () => import('@/views/ProgressView.vue'),
     },
     {
+      path: '/students',
+      name: 'students',
+      // Trainer-only: the guard below sends anyone else to the sign-in modal.
+      meta: { requiresAuth: true, role: 'trainer' },
+      component: () => import('@/views/StudentsView.vue'),
+    },
+    {
       path: '/trainers',
       name: 'trainers',
       component: () => import('@/views/TrainersView.vue'),
@@ -40,7 +47,11 @@ router.beforeEach((to) => {
   if (!to.meta.requiresAuth) return true
   // Called inside the guard (not at module scope) so Pinia is already installed.
   const auth = useAuthStore()
-  if (auth.isSignedIn) return true
+  if (auth.isSignedIn) {
+    // Signed in but with the wrong role: send them to their own area.
+    if (to.meta.role && to.meta.role !== auth.user?.role) return { path: '/' }
+    return true
+  }
   // Sign-in is a modal, not a page: block the navigation and open it, keeping
   // the intended route so the user lands there afterwards.
   auth.promptSignIn(to.fullPath)

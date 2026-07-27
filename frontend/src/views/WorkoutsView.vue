@@ -319,19 +319,9 @@ h1 {
   flex-direction: column;
   gap: var(--space-xs);
 }
+/* Look and focus ring come from the shared form baseline in styles.css. */
 .num input {
   width: 120px;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-input);
-  color: var(--color-text);
-  font: inherit;
-}
-.num input:focus-visible {
-  outline: none;
-  border-color: var(--color-accent);
-  box-shadow: var(--glow);
 }
 .error {
   margin: 0;

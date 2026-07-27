@@ -45,7 +45,9 @@ function close(): void {
 async function submit(): Promise<void> {
   if (!(await auth.signIn(email.value, password.value))) return
   close()
-  const target = auth.consumeRedirect() ?? (auth.isTrainer ? '/trainers' : '/progress')
+  // Land on the area for the role: a trainer manages students, a student looks
+  // for a trainer. A blocked route (from the guard) still wins.
+  const target = auth.consumeRedirect() ?? (auth.isTrainer ? '/students' : '/trainers')
   await router.push(target)
 }
 
@@ -88,7 +90,8 @@ watch(
           <p class="demo-banner" role="note">{{ t('auth.demoBanner') }}</p>
 
           <!-- Role picker: switching also refills the credentials below. -->
-          <div class="roles" role="radiogroup" :aria-label="t('auth.howToEnter')">
+          <p id="role-caption" class="roles-caption">{{ t('auth.howToEnter') }}</p>
+          <div class="roles" role="radiogroup" aria-labelledby="role-caption">
             <button
               v-for="(account, key) in ACCOUNTS"
               :key="key"
@@ -100,7 +103,7 @@ watch(
               @click="choose(key)"
             >
               <span class="role-icon" aria-hidden="true">{{ account.icon }}</span>
-              {{ key === 'client' ? t('auth.asClient') : t('auth.asTrainer') }}
+              {{ key === 'client' ? t('auth.roleClient') : t('auth.roleTrainer') }}
             </button>
           </div>
 
@@ -197,6 +200,11 @@ watch(
   font-size: 0.82rem;
 }
 /* Segmented control: two mutually exclusive ways in. */
+.roles-caption {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
 .roles {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -211,6 +219,10 @@ watch(
   align-items: center;
   justify-content: center;
   gap: 6px;
+  /* Fixed height and a single line: the active state turns bold, which would
+     otherwise re-wrap the other label and make it jump. */
+  min-height: 38px;
+  white-space: nowrap;
   padding: 8px 10px;
   border: none;
   border-radius: 999px;
