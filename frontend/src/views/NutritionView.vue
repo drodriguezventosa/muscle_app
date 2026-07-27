@@ -510,8 +510,6 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-  padding-bottom: var(--space-xs);
-  border-bottom: 1px dashed var(--color-border);
 }
 .photo-msg {
   margin: 0;
