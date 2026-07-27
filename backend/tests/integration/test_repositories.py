@@ -78,3 +78,29 @@ async def test_exercise_repository_list_catalog_applies_filters(session: AsyncSe
     by_level = await repo.list_catalog(limit=10, difficulty=Difficulty.BEGINNER)
     assert by_level
     assert all(e.difficulty == Difficulty.BEGINNER for e in by_level)
+
+
+async def test_food_seed_inserts_only_the_missing_foods(session: AsyncSession) -> None:
+    # Regression: the seed used to insert only when the table was empty, so newly
+    # curated foods never reached an already-populated (deployed) database.
+    from sqlalchemy import delete, func
+    from sqlalchemy import select as sa_select
+
+    from app.infrastructure.persistence.models.food import FoodModel
+    from app.infrastructure.persistence.seed import FOODS, _seed_foods
+
+    await seed(session)
+    total = await session.scalar(sa_select(func.count()).select_from(FoodModel))
+    assert total == len(FOODS)
+
+    # Re-running changes nothing...
+    assert await _seed_foods(session) == 0
+
+    # ...but a food missing from a populated catalog is restored, and it comes
+    # back without an embedding so the boot-time backfill vectorizes it.
+    await session.execute(delete(FoodModel).where(FoodModel.name == FOODS[0][0]))
+    await session.commit()
+    assert await _seed_foods(session) == 1
+    restored = await session.scalar(sa_select(FoodModel).where(FoodModel.name == FOODS[0][0]))
+    assert restored is not None
+    assert restored.embedding is None
