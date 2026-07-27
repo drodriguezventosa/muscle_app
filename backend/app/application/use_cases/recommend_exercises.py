@@ -5,7 +5,7 @@ import json
 
 from app.application.dto.recommendation import Recommendation
 from app.domain.entities.exercise import Exercise
-from app.domain.ports.ai import EmbeddingPort, LLMPort
+from app.domain.ports.ai import EmbeddingPort, EmbeddingUnavailableError, LLMPort
 from app.domain.ports.cache import CachePort
 from app.domain.ports.repositories import ExerciseRepository
 from app.domain.value_objects.enums import Difficulty, Equipment
@@ -54,8 +54,15 @@ class RecommendExercises:
                 reply="Cuéntame qué quieres entrenar (músculo, objetivo o material). " + DISCLAIMER
             )
 
-        vector = await self._embed(clean)
-        candidates = await self._exercises.search_similar(vector, limit, equipment, difficulty)
+        # Semantic search is the primary path; if the embedding provider is down
+        # or rate-limited we fall back to a structured catalog query so the user
+        # still gets real exercises instead of an error.
+        try:
+            vector = await self._embed(clean)
+            candidates = await self._exercises.search_similar(vector, limit, equipment, difficulty)
+        except EmbeddingUnavailableError:
+            candidates = await self._exercises.list_catalog(limit, equipment, difficulty)
+
         reply = await self._llm.generate(SYSTEM_PROMPT, self._build_prompt(clean, candidates))
         return Recommendation(reply=self._ensure_disclaimer(reply), exercises=tuple(candidates))
 

@@ -12,10 +12,25 @@ import hashlib
 import math
 
 import httpx
+import structlog
 
-from app.domain.ports.ai import EmbeddingPort
+from app.domain.ports.ai import EmbeddingPort, EmbeddingUnavailableError
 
 _TIMEOUT = httpx.Timeout(30.0)
+_logger = structlog.get_logger(__name__)
+
+
+def _log_embedding_error(provider: str, exc: httpx.HTTPError) -> None:
+    """Log an embedding call failure (status + body when available), no secrets."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        _logger.warning(
+            "embedding_request_failed",
+            provider=provider,
+            status=exc.response.status_code,
+            body=exc.response.text[:300],
+        )
+    else:
+        _logger.warning("embedding_request_failed", provider=provider, error=repr(exc))
 
 
 def _normalize(values: list[float]) -> list[float]:
@@ -86,8 +101,15 @@ class GeminiEmbedding(EmbeddingPort):
         return _normalize([float(x) for x in response.json()["embedding"]["values"]])
 
     async def embed(self, text: str) -> list[float]:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            return await self._embed_one(client, text)
+        # Any transport/status error (notably free-tier 429s, an expired key or a
+        # retired model) becomes EmbeddingUnavailableError, so callers degrade
+        # instead of turning a provider hiccup into a 500.
+        try:
+            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+                return await self._embed_one(client, text)
+        except httpx.HTTPError as exc:
+            _log_embedding_error("gemini", exc)
+            raise EmbeddingUnavailableError("gemini embedding request failed") from exc
 
     async def embed_many(self, texts: list[str]) -> list[list[float]]:
         semaphore = asyncio.Semaphore(self._MAX_CONCURRENCY)
@@ -96,8 +118,12 @@ class GeminiEmbedding(EmbeddingPort):
             async with semaphore:
                 return await self._embed_one(client, text)
 
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            return list(await asyncio.gather(*(bounded(client, text) for text in texts)))
+        try:
+            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+                return list(await asyncio.gather(*(bounded(client, text) for text in texts)))
+        except httpx.HTTPError as exc:
+            _log_embedding_error("gemini", exc)
+            raise EmbeddingUnavailableError("gemini batch embedding request failed") from exc
 
 
 class SentenceTransformerEmbedding(EmbeddingPort):

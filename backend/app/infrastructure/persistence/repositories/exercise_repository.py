@@ -82,3 +82,18 @@ class SqlAlchemyExerciseRepository(ExerciseRepository):
         stmt = stmt.order_by(ExerciseModel.embedding.cosine_distance(embedding)).limit(limit)
         result = await self._session.scalars(stmt)
         return [self._to_entity(m) for m in result.unique()]
+
+    async def list_catalog(
+        self,
+        limit: int,
+        equipment: Equipment | None = None,
+        difficulty: Difficulty | None = None,
+    ) -> list[Exercise]:
+        stmt = select(ExerciseModel)
+        if equipment is not None:
+            stmt = stmt.where(ExerciseModel.equipment == equipment)
+        if difficulty is not None:
+            stmt = stmt.where(ExerciseModel.difficulty == difficulty)
+        stmt = stmt.order_by(ExerciseModel.id).limit(limit)
+        result = await self._session.scalars(stmt)
+        return [self._to_entity(m) for m in result.unique()]

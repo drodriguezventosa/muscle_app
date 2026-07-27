@@ -33,7 +33,15 @@ async def bootstrap() -> None:
         # serving (the explorer + filters work without vectors; semantic search
         # degrades until the next successful backfill).
         try:
-            embedding = build_embedding(get_settings())
+            settings = get_settings()
+            if settings.embedding_rebuild:
+                # Vectors from a different embedding model are not comparable, so
+                # drop them and let the backfill below recompute every row.
+                await session.execute(text("UPDATE exercises SET embedding = NULL"))
+                await session.execute(text("UPDATE foods SET embedding = NULL"))
+                await session.commit()
+                print("EMBEDDING_REBUILD set: cleared stored vectors, recomputing.")
+            embedding = build_embedding(settings)
             count = await backfill_embeddings(session, embedding)
             food_count = await backfill_food_embeddings(session, embedding)
             print(f"Backfilled embeddings for {count} exercises and {food_count} foods.")

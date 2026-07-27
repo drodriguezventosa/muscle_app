@@ -5,6 +5,7 @@ import math
 import httpx
 import pytest
 
+from app.domain.ports.ai import EmbeddingUnavailableError
 from app.infrastructure.ai.embeddings import FakeEmbedding, GeminiEmbedding
 from app.infrastructure.ai.llm import _FALLBACK, GeminiLLM, GroqLLM, StubLLM
 
@@ -138,3 +139,25 @@ async def test_gemini_embedding_many_embeds_each_via_embedcontent(
     vectors = await GeminiEmbedding("k", "gemini-embedding-001", dim=2).embed_many(["a", "b"])
 
     assert vectors == [[1.0, 0.0], [0.0, 1.0]]  # each L2-normalized, order preserved
+
+
+async def test_gemini_embedding_raises_unavailable_on_http_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Google shut gemini-embedding-001 down on 2026-07-14, so calls to a retired
+    # model 404. The adapter must surface a domain error (never leak transport
+    # errors, which used to bubble up as a 500).
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        return httpx.Response(
+            404,
+            json={"error": {"code": 404, "status": "NOT_FOUND", "message": "model not found"}},
+            request=httpx.Request("POST", "https://x/embed"),
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    adapter = GeminiEmbedding("k", "gemini-embedding-001", dim=8)
+
+    with pytest.raises(EmbeddingUnavailableError):
+        await adapter.embed("chest at home")
+    with pytest.raises(EmbeddingUnavailableError):
+        await adapter.embed_many(["a", "b"])
