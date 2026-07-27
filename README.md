@@ -15,8 +15,10 @@ Aplicación web para explorar los músculos del cuerpo y descubrir qué ejercici
 - 🏋️ **Generador de rutinas** por objetivo (pérdida de grasa / hipertrofia / fuerza) a partir
   de tus datos (altura, peso, nivel), con IMC.
 - 🍽️ **Nutrición**: calculadora de **calorías y macros** diarios (Mifflin-St Jeor, TDEE, IMC),
-  **catálogo de alimentos** con buscador, **constructor de menú** frente a tus objetivos y
-  **chat de comidas** (RAG) — con aviso de que no sustituye a un dietista-nutricionista.
+  **catálogo de alimentos** con buscador, **constructor de menú** frente a tus objetivos,
+  **chat de comidas** (RAG) y **estimación por foto** (haz una foto al plato y la IA
+  detecta los alimentos y sus cantidades, editables) — con aviso de que no sustituye a
+  un dietista-nutricionista.
 - 📈 **Progreso**: registra el peso por ejercicio y sigue tu evolución con sobrecarga
   progresiva (guardado en tu dispositivo).
 - 👤 **Entrenadores** (vista previa): contratar un entrenador y panel para gestionar alumnos.

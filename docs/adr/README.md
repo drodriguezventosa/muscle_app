@@ -26,3 +26,4 @@ sequentially; supersede rather than edit past decisions.
 | [0017](0017-onboarding-guided-tour.md) | Onboarding guided tour and section-aware assistant | accepted |
 | [0018](0018-embedding-model-migration.md) | Surviving embedding-model retirement (gemini-embedding-2 + graceful degradation) | accepted |
 | [0019](0019-embeddings-provider-jina.md) | Embeddings on Jina AI (Google's free tier blocks datacenter IPs) | accepted |
+| [0020](0020-meal-photo-estimation.md) | Meal-photo estimation (vision port, editable results) | accepted |
