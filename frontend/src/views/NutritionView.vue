@@ -3,7 +3,9 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import HealthDisclaimer from '@/components/HealthDisclaimer.vue'
-import type { ActivityLevel, Food, NutritionGoal } from '@/api/types'
+import MealPhotoCapture from '@/components/MealPhotoCapture.vue'
+import { analyzeMealPhoto } from '@/api/nutrition'
+import type { ActivityLevel, EstimatedFood, Food, NutritionGoal } from '@/api/types'
 import { useNutritionStore } from '@/stores/nutrition'
 
 const { t, locale } = useI18n()
@@ -66,6 +68,49 @@ const totals = computed(() => {
     fat: Math.round(acc.fat),
   }
 })
+
+// --- Meal photo -> editable menu items -------------------------------------
+const photoLoading = ref(false)
+const photoNote = ref<string | null>(null)
+const photoError = ref<string | null>(null)
+// Photo-estimated foods are not catalog rows, so they get their own negative ids
+// (the menu is keyed by food id, and catalog ids are positive).
+let estimatedId = 0
+
+/** Store AI totals as per-100 g values so editing grams rescales macros as usual. */
+function toMenuItem(estimate: EstimatedFood): MenuItem {
+  const per100 = (total: number) => (estimate.grams > 0 ? (total / estimate.grams) * 100 : 0)
+  estimatedId -= 1
+  return {
+    food: {
+      id: estimatedId,
+      name: estimate.name,
+      category: 'photo',
+      emoji: '📷',
+      kcal: per100(estimate.kcal),
+      proteinG: per100(estimate.proteinG),
+      carbsG: per100(estimate.carbsG),
+      fatG: per100(estimate.fatG),
+      tags: [],
+    },
+    grams: Math.round(estimate.grams),
+  }
+}
+
+async function onPhoto(blob: Blob): Promise<void> {
+  photoLoading.value = true
+  photoError.value = null
+  photoNote.value = null
+  try {
+    const result = await analyzeMealPhoto(blob)
+    photoNote.value = result.note
+    menu.push(...result.items.map(toMenuItem))
+  } catch {
+    photoError.value = t('nutrition.photo.error')
+  } finally {
+    photoLoading.value = false
+  }
+}
 
 function pct(current: number, target: number | undefined): number | null {
   return target && target > 0 ? Math.round((current / target) * 100) : null
@@ -186,12 +231,17 @@ const kcalPct = computed(() => pct(totals.value.kcal, store.result?.calories))
     <div class="card glass menu-builder animate-in" style="animation-delay: 0.18s">
       <h2 class="mb-title">{{ t('nutrition.menu.title') }}</h2>
       <p class="mb-lead">{{ t('nutrition.menu.lead') }}</p>
-      <input
-        v-model="search"
-        class="search"
-        type="search"
-        :placeholder="t('nutrition.menu.search')"
-      />
+      <!-- Photo → estimated foods, added as normal (editable) menu items -->
+      <div class="photo-block">
+        <MealPhotoCapture :busy="photoLoading" @captured="onPhoto" />
+        <p v-if="photoLoading" class="photo-msg loading" role="status">
+          <span class="spinner" aria-hidden="true"></span>
+          {{ t('nutrition.photo.analyzing') }}
+        </p>
+        <p v-else-if="photoError" class="photo-msg error" role="alert">{{ photoError }}</p>
+        <p v-else-if="photoNote" class="photo-msg" role="status">{{ photoNote }}</p>
+      </div>
+
       <ul class="foods">
         <li v-for="f in filteredFoods" :key="f.id">
           <button type="button" class="food" @click="addFood(f)">
@@ -209,6 +259,14 @@ const kcalPct = computed(() => pct(totals.value.kcal, store.result?.calories))
           </button>
         </li>
       </ul>
+      <!-- Search sits under the shortlist: the catalog is long, so the visible
+           foods come first and the box is there to reach the rest. -->
+      <input
+        v-model="search"
+        class="search"
+        type="search"
+        :placeholder="t('nutrition.menu.search')"
+      />
 
       <div v-if="menu.length" class="menu">
         <div v-for="(item, i) in menu" :key="item.food.id" class="menu-item">
@@ -447,6 +505,45 @@ select:focus {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.9rem;
+}
+.photo-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.photo-msg {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+.photo-msg.loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.photo-msg.error {
+  color: var(--color-danger);
+}
+/* Small indeterminate spinner: an accent arc spinning over a faint ring. */
+.spinner {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spinner-rotate 0.7s linear infinite;
+}
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
 }
 .foods {
   list-style: none;

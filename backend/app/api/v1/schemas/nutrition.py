@@ -55,3 +55,26 @@ class NutritionTargetsRead(BaseModel):
     bmi_category: str
     goal: NutritionGoal
     warning: str | None = None
+
+
+class EstimatedFoodRead(BaseModel):
+    """A food estimated from a photo: macros are TOTALS for `grams`."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+    grams: float
+    kcal: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+
+
+class MealPhotoResponse(BaseModel):
+    """Result of analysing a meal photo (always 200; see `available`)."""
+
+    items: list[EstimatedFoodRead]
+    note: str
+    # False when the vision provider could not be reached, so the UI can tell
+    # "no food recognised" apart from "service unavailable".
+    available: bool

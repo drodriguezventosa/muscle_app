@@ -2,15 +2,17 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
 
 from app.api.v1.deps import (
+    provide_analyze_meal_photo,
     provide_calculate_nutrition,
     provide_list_foods,
     provide_recommend_meals,
 )
 from app.api.v1.schemas.nutrition import (
     FoodRead,
+    MealPhotoResponse,
     MealRequest,
     MealResponse,
     NutritionRequest,
@@ -18,9 +20,12 @@ from app.api.v1.schemas.nutrition import (
 )
 from app.application.dto.nutrition import NutritionTargets
 from app.application.use_cases.nutrition_use_cases import (
+    AnalyzeMealPhoto,
     CalculateNutrition,
+    ImageTooLargeError,
     ListFoods,
     RecommendMeals,
+    UnsupportedImageTypeError,
 )
 from app.core.rate_limit import RATE_LIMIT, limiter
 from app.domain.entities.food import Food
@@ -72,3 +77,33 @@ async def recommend_meals(
 ) -> MealResponse:
     rec = await use_case.execute(payload.message)
     return MealResponse(reply=rec.reply, foods=list(rec.foods))
+
+
+@router.post(
+    "/photo",
+    response_model=MealPhotoResponse,
+    summary="Estimate the foods in a meal photo (approximate, editable)",
+)
+@limiter.limit(RATE_LIMIT)
+async def analyze_meal_photo(
+    request: Request,  # required by slowapi to identify the client
+    use_case: Annotated[AnalyzeMealPhoto, Depends(provide_analyze_meal_photo)],
+    photo: UploadFile,
+) -> MealPhotoResponse:
+    """Analyse an uploaded meal photo. The image is not stored anywhere."""
+    image = await photo.read()
+    try:
+        estimate = await use_case.execute(image, photo.content_type or "")
+    except ImageTooLargeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="La imagen es demasiado grande.",
+        ) from exc
+    except UnsupportedImageTypeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Formato de imagen no admitido (usa JPEG, PNG o WebP).",
+        ) from exc
+    return MealPhotoResponse(
+        items=list(estimate.items), note=estimate.note, available=estimate.available
+    )

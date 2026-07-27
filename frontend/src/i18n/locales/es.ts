@@ -114,6 +114,16 @@ export default {
     goal: { lose_fat: 'Perder grasa', maintain: 'Mantener', gain_muscle: 'Ganar músculo' },
     macros: { protein: 'Proteína', carbs: 'Carbohidratos', fat: 'Grasa' },
     macroAbbr: { protein: 'P', carbs: 'C', fat: 'G' },
+    photo: {
+      take: 'Hacer foto',
+      upload: 'Subir foto',
+      shoot: 'Capturar',
+      cancel: 'Cancelar',
+      starting: 'Abriendo la cámara…',
+      analyzing: 'Analizando la foto…',
+      cameraError: 'No se pudo abrir la cámara. Revisa los permisos o sube una foto.',
+      error: 'No se pudo analizar la foto. Inténtalo de nuevo o añade los alimentos a mano.',
+    },
     menu: {
       title: 'Construye un menú',
       lead: 'Añade alimentos y mira cómo suma el día frente a tus objetivos.',

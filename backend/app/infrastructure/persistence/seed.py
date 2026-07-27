@@ -1240,15 +1240,58 @@ FOODS: list[tuple[str, str, str, str, float, float, float, float, list[str]]] = 
     ("Aceite de oliva", "Olive oil", "🫒", "fat", 884, 0, 0, 100, ["vegan", "vegetarian", "gluten_free"]),
     ("Semillas de chía", "Chia seeds", "🌰", "fat", 486, 17, 42, 31, ["vegan", "vegetarian", "gluten_free"]),
     ("Chocolate negro", "Dark chocolate", "🍫", "fat", 546, 5, 61, 31, ["vegetarian", "gluten_free"]),
+    # --- Added 2026-07-27: common gaps found while testing the meal-photo feature ---
+    ("Calabaza", "Pumpkin", "🎃", "vegetable", 26, 1, 6.5, 0.1, ["vegan", "vegetarian", "gluten_free"]),
+    ("Setas", "Mushrooms", "🍄", "vegetable", 22, 3.1, 3.3, 0.3, ["vegan", "vegetarian", "gluten_free"]),
+    ("Puerro", "Leek", "🥬", "vegetable", 61, 1.5, 14, 0.3, ["vegan", "vegetarian", "gluten_free"]),
+    ("Apio", "Celery", "🥬", "vegetable", 16, 0.7, 3, 0.2, ["vegan", "vegetarian", "gluten_free"]),
+    ("Remolacha", "Beetroot", "🥬", "vegetable", 43, 1.6, 10, 0.2, ["vegan", "vegetarian", "gluten_free"]),
+    ("Col", "Cabbage", "🥬", "vegetable", 25, 1.3, 6, 0.1, ["vegan", "vegetarian", "gluten_free"]),
+    ("Alcachofa", "Artichoke", "🥬", "vegetable", 47, 3.3, 11, 0.2, ["vegan", "vegetarian", "gluten_free"]),
+    ("Rúcula", "Rocket", "🥬", "vegetable", 25, 2.6, 3.7, 0.7, ["vegan", "vegetarian", "gluten_free"]),
+    ("Aceituna", "Olives", "🫒", "fat", 145, 1, 3.8, 15, ["vegan", "vegetarian", "gluten_free"]),
+    ("Sardina", "Sardine", "🐟", "protein", 208, 25, 0, 11, ["gluten_free", "high_protein"]),
+    ("Merluza", "Hake", "🐟", "protein", 90, 18, 0, 2, ["gluten_free", "high_protein"]),
+    ("Caballa", "Mackerel", "🐟", "protein", 205, 19, 0, 14, ["gluten_free", "high_protein"]),
+    ("Trucha", "Trout", "🐟", "protein", 148, 21, 0, 7, ["gluten_free", "high_protein"]),
+    ("Mejillón", "Mussels", "🦪", "protein", 86, 12, 3.7, 2.2, ["gluten_free", "high_protein"]),
+    ("Calamar", "Squid", "🦑", "protein", 92, 16, 3.1, 1.4, ["gluten_free", "high_protein"]),
+    ("Pulpo", "Octopus", "🐙", "protein", 82, 15, 2.2, 1, ["gluten_free", "high_protein"]),
+    ("Conejo", "Rabbit", "🍖", "protein", 173, 33, 0, 3.5, ["gluten_free", "high_protein"]),
+    ("Cordero", "Lamb", "🍖", "protein", 258, 25, 0, 17, ["gluten_free", "high_protein"]),
+    ("Salchicha", "Sausage", "🌭", "protein", 301, 12, 3, 27, ["gluten_free"]),
+    ("Beicon", "Bacon", "🥓", "protein", 541, 37, 1.4, 42, ["gluten_free", "high_protein"]),
+    ("Soja texturizada", "Textured soy protein", "🌱", "protein", 336, 52, 30, 1.5, ["vegan", "vegetarian", "high_protein"]),
+    ("Requesón", "Cottage cheese", "🧀", "dairy", 98, 11, 3.4, 4.3, ["vegetarian", "gluten_free", "high_protein"]),
+    ("Kéfir", "Kefir", "🥛", "dairy", 55, 3.3, 4.5, 2.5, ["vegetarian", "gluten_free"]),
+    ("Queso feta", "Feta cheese", "🧀", "dairy", 264, 14, 4.1, 21, ["vegetarian", "gluten_free"]),
+    ("Bebida de soja", "Soy milk", "🥛", "dairy", 43, 3.3, 2.6, 1.8, ["vegan", "vegetarian", "gluten_free"]),
+    ("Arroz de sushi", "Sushi rice", "🍚", "carb", 130, 2.4, 29, 0.2, ["vegan", "vegetarian", "gluten_free"]),
+    ("Tortilla de maíz", "Corn tortilla", "🫓", "carb", 218, 5.7, 45, 2.9, ["vegan", "vegetarian", "gluten_free"]),
+    ("Pan de centeno", "Rye bread", "🍞", "carb", 259, 8.5, 48, 3.3, ["vegan", "vegetarian"]),
+    ("Yuca", "Cassava", "🥔", "carb", 160, 1.4, 38, 0.3, ["vegan", "vegetarian", "gluten_free"]),
+    ("Cereales integrales", "Whole grain cereal", "🥣", "carb", 379, 10, 68, 5, ["vegetarian"]),
+    ("Cerezas", "Cherries", "🍒", "fruit", 63, 1.1, 16, 0.2, ["vegan", "vegetarian", "gluten_free"]),
+    ("Higo", "Fig", "🫐", "fruit", 74, 0.8, 19, 0.3, ["vegan", "vegetarian", "gluten_free"]),
+    ("Granada", "Pomegranate", "🍎", "fruit", 83, 1.7, 19, 1.2, ["vegan", "vegetarian", "gluten_free"]),
+    ("Frambuesa", "Raspberry", "🫐", "fruit", 52, 1.2, 12, 0.7, ["vegan", "vegetarian", "gluten_free"]),
+    ("Dátil", "Date", "🌴", "fruit", 282, 2.5, 75, 0.4, ["vegan", "vegetarian", "gluten_free"]),
 ]
 # fmt: on
 
 
-async def _seed_foods(session: AsyncSession) -> bool:
-    """Seed the food catalog if empty. Independent of muscles/exercises so it
-    lands on an already-seeded database (e.g. an existing production DB)."""
-    if await session.scalar(select(func.count()).select_from(FoodModel)):
-        return False
+async def _seed_foods(session: AsyncSession) -> int:
+    """Insert the catalog foods that are missing, keyed by Spanish name.
+
+    Incremental on purpose: an "only if the table is empty" seed would never
+    deliver newly curated foods to an already-populated database (e.g. the
+    deployed one). New rows are created without an embedding, so the boot-time
+    backfill vectorizes them on the same deploy. Returns how many were inserted.
+    """
+    known = set((await session.scalars(select(FoodModel.name))).all())
+    missing = [food for food in FOODS if food[0] not in known]
+    if not missing:
+        return 0
     session.add_all(
         FoodModel(
             name=name_es,
@@ -1261,10 +1304,10 @@ async def _seed_foods(session: AsyncSession) -> bool:
             fat_g=fat,
             tags=tags,
         )
-        for name_es, name_en, emoji, category, kcal, protein, carbs, fat, tags in FOODS
+        for name_es, name_en, emoji, category, kcal, protein, carbs, fat, tags in missing
     )
     await session.commit()
-    return True
+    return len(missing)
 
 
 async def seed(session: AsyncSession) -> bool:
@@ -1272,7 +1315,7 @@ async def seed(session: AsyncSession) -> bool:
     foods_inserted = await _seed_foods(session)
     existing = await session.scalar(select(func.count()).select_from(MuscleModel))
     if existing:
-        return foods_inserted
+        return bool(foods_inserted)
 
     muscles = {
         svg_id: MuscleModel(

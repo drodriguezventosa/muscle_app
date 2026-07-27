@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 
+from app.domain.entities.estimated_food import EstimatedFood
 from app.domain.entities.food import Food
 from app.domain.value_objects.enums import NutritionGoal
 
@@ -29,3 +30,16 @@ class MealRecommendation:
 
     reply: str
     foods: tuple[Food, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True, slots=True)
+class MealPhotoEstimate:
+    """Foods estimated from a photo, plus the note shown with them.
+
+    `items` may be empty (no food recognised, or the provider was unavailable);
+    `available` tells the two cases apart so the UI can word it properly.
+    """
+
+    items: tuple[EstimatedFood, ...] = field(default_factory=tuple)
+    note: str = ""
+    available: bool = True

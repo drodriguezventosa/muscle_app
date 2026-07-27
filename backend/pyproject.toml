@@ -21,6 +21,8 @@ dependencies = [
     "slowapi>=0.1.9",
     "structlog>=24.4",
     "redis>=5.0",
+    # Required by FastAPI to parse multipart uploads (the meal-photo endpoint).
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

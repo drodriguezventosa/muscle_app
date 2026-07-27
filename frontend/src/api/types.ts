@@ -81,3 +81,13 @@ export interface Exercise {
   steps: string[]
   targetedMuscles: TargetedMuscle[]
 }
+
+/** A food estimated from a photo: macros are TOTALS for `grams`, not per 100 g. */
+export interface EstimatedFood {
+  name: string
+  grams: number
+  kcal: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+}
