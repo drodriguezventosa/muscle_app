@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Annotated, Literal
 
-from pydantic import Field, computed_field, field_validator
+from pydantic import Field, ValidationInfo, computed_field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from sqlalchemy import URL
 
@@ -102,6 +102,16 @@ class Settings(BaseSettings):
     # and the provider's token cost.
     vision_max_image_bytes: int = 5 * 1024 * 1024
 
+    # ---- Coaching sign-in (trainers area) ----
+    # Dev-only fallback: `_reject_default_secret_in_production` refuses to boot
+    # with it when APP_ENV=production, so a real secret must be set there.
+    jwt_secret: str = "dev-only-insecure-secret-change-me-in-prod"  # noqa: S105 - guarded
+    jwt_expire_minutes: int = 480  # 8 h: long enough for a session, short enough to expire
+    # Password of the seeded demo accounts. They exist so the app can be tried
+    # without credentials, so this value is intentionally public — the accounts
+    # only ever hold demo data.
+    demo_password: str = "muscleapp-demo"  # noqa: S105 - public by design
+
     # ---- Cache ----
     # "memory" is in-process and zero-setup (default); "redis" uses an external
     # store (e.g. Upstash) via REDIS_URL. Falls back to memory if the URL is empty.
@@ -136,6 +146,17 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @field_validator("jwt_secret")
+    @classmethod
+    def _reject_default_secret_in_production(cls, value: str, info: ValidationInfo) -> str:
+        """Refuse the shipped fallback secret outside development (OWASP A05)."""
+        if (
+            info.data.get("app_env") == "production"
+            and value == "dev-only-insecure-secret-change-me-in-prod"
+        ):
+            raise ValueError("JWT_SECRET must be set in production")
+        return value
 
 
 @lru_cache

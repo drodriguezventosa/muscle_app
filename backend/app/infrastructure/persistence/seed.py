@@ -10,11 +10,20 @@ import asyncio
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.value_objects.enums import Difficulty, Equipment, MuscleGroup, MuscleRole
+from app.core.config import get_settings
+from app.domain.value_objects.enums import (
+    Difficulty,
+    Equipment,
+    MuscleGroup,
+    MuscleRole,
+    UserRole,
+)
 from app.infrastructure.persistence.database import get_session_factory
 from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
 from app.infrastructure.persistence.models.food import FoodModel
 from app.infrastructure.persistence.models.muscle import MuscleModel
+from app.infrastructure.persistence.models.user import UserModel
+from app.infrastructure.security.hashing import Argon2Hasher
 
 
 def _yt(video_id: str) -> str:
@@ -1280,6 +1289,34 @@ FOODS: list[tuple[str, str, str, str, float, float, float, float, list[str]]] = 
 # fmt: on
 
 
+# Demo accounts, so the app can be tried without credentials (they are shown in
+# the sign-in form). They only ever hold demo data; there is no public sign-up,
+# so these are the only accounts that exist. (name, email, role)
+DEMO_USERS: list[tuple[str, str, UserRole]] = [
+    ("Ana López", "entrenador@demo.muscleapp", UserRole.TRAINER),
+    ("Javier M.", "alumno@demo.muscleapp", UserRole.CLIENT),
+]
+
+
+async def _seed_users(session: AsyncSession, password: str) -> int:
+    """Insert the demo accounts that are missing, keyed by email.
+
+    Hashing is deliberate work (Argon2), so it only happens when there is
+    actually an account to create — not on every boot.
+    """
+    known = set((await session.scalars(select(UserModel.email))).all())
+    missing = [u for u in DEMO_USERS if u[1] not in known]
+    if not missing:
+        return 0
+    password_hash = Argon2Hasher().hash(password)
+    session.add_all(
+        UserModel(name=name, email=email, role=role, password_hash=password_hash)
+        for name, email, role in missing
+    )
+    await session.commit()
+    return len(missing)
+
+
 async def _seed_foods(session: AsyncSession) -> int:
     """Insert the catalog foods that are missing, keyed by Spanish name.
 
@@ -1312,10 +1349,11 @@ async def _seed_foods(session: AsyncSession) -> int:
 
 async def seed(session: AsyncSession) -> bool:
     """Populate the catalog if empty. Returns True if any data was inserted."""
+    users_inserted = await _seed_users(session, get_settings().demo_password)
     foods_inserted = await _seed_foods(session)
     existing = await session.scalar(select(func.count()).select_from(MuscleModel))
     if existing:
-        return bool(foods_inserted)
+        return bool(foods_inserted or users_inserted)
 
     muscles = {
         svg_id: MuscleModel(
