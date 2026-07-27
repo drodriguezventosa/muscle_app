@@ -7,9 +7,11 @@ import ChatWidget from '@/components/ChatWidget.vue'
 import GuidedTour, { type TourStep } from '@/components/GuidedTour.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
 const route = useRoute()
+const auth = useAuthStore()
 
 // Mobile navigation menu (hamburger). Hidden on desktop via CSS.
 const menuOpen = ref(false)
@@ -105,6 +107,22 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <RouterLink to="/progress">{{ t('nav.progress') }}</RouterLink>
       <RouterLink to="/trainers">{{ t('nav.trainers') }}</RouterLink>
     </nav>
+    <!-- Session state: who is signed in, and a way out. -->
+    <button
+      v-if="auth.isSignedIn"
+      class="session-btn"
+      type="button"
+      :title="auth.user?.email"
+      @click="auth.signOut()"
+    >
+      <span aria-hidden="true">{{ auth.isTrainer ? '🧑‍🏫' : '🏋️' }}</span>
+      <span class="session-name">{{ auth.user?.name }}</span>
+      <span class="session-out">{{ t('auth.signOut') }}</span>
+    </button>
+    <RouterLink v-else to="/login" class="session-btn">
+      <span aria-hidden="true">👤</span>
+      <span class="session-name">{{ t('auth.signIn') }}</span>
+    </RouterLink>
     <button
       class="help-btn"
       type="button"
@@ -193,6 +211,36 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+.session-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.82rem;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.session-btn:hover {
+  border-color: var(--color-accent);
+}
+.session-out {
+  color: var(--color-muted);
+  border-left: 1px solid var(--color-border);
+  padding-left: var(--space-xs);
+}
+/* Hide the name on narrow screens; the icon still identifies the role. */
+@media (max-width: 900px) {
+  .session-name,
+  .session-out {
+    display: none;
   }
 }
 /* Replay-tour button: circular, matches the theme toggle. */
