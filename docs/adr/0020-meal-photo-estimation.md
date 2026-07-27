@@ -55,12 +55,24 @@ database. The catalog grew from 76 to 111 foods.
 
 - Logging a plate is one photo instead of a dozen taps, while the numbers stay
   explicitly editable and carry the nutrition disclaimer.
-- **Not enabled in production yet**: `VISION_PROVIDER` defaults to `stub`, and
-  Gemini's free tier rejects datacenter IPs (ADR-0019), so the feature works
-  locally but would return the stub on Render. Groq — the deploy LLM — no longer
-  lists any vision model. Enabling it needs a provider reachable from the host,
-  which is the same open question as embeddings; the port makes that a one-adapter
-  change.
+- **Two providers, picked per environment.** Gemini's free tier rejects
+  datacenter IPs (ADR-0019) and Groq no longer lists any vision model, so the
+  deploy uses **OpenRouter** with a free multimodal model. Measured on
+  2026-07-27 with the same test photos:
+
+  | Provider / model | Latency | English breakfast |
+  |---|---|---|
+  | Gemini `3.1-flash-lite` (local only) | ~2 s | 7/7 foods, exact names |
+  | OpenRouter `google/gemma-4-26b-a4b-it:free` | 16–29 s | 6–7/7, plausible portions, minor naming drift |
+  | OpenRouter `nvidia/nemotron-nano-12b-v2-vl:free` | ~7 s | inflated portions, broken Spanish |
+  | OpenRouter `google/gemma-4-31b-it:free` | — | consistently 429 upstream |
+
+  The trade-off is deliberate: correctness of the *foods* matters more than
+  latency here (the user edits the grams anyway), and the spinner covers the
+  wait. Both adapters stay available and are switched with `VISION_PROVIDER`, so
+  moving to a paid Gemini key later is one environment variable.
+- The free tier is roughly 50 requests/day and can 429 upstream; that path is
+  already covered by the graceful degradation above.
 - New dependency `python-multipart` (required by FastAPI for uploads) and a new
   upload surface, mitigated by the mime/size validation and the existing rate
   limit.

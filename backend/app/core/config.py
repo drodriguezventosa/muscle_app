@@ -91,8 +91,13 @@ class Settings(BaseSettings):
     # "stub" is deterministic and needs no service (default, dev/CI); "gemini"
     # calls the multimodal API. NOTE: Google's free tier is unreachable from
     # datacenter IPs (ADR-0019), so "gemini" works locally but not on Render.
-    vision_provider: Literal["stub", "gemini"] = "stub"
+    vision_provider: Literal["stub", "openrouter", "gemini"] = "stub"
     vision_model: str = "gemini-3.1-flash-lite"
+    # OpenRouter (openrouter.ai, free tier, no card) is the deploy-capable option:
+    # it accepts datacenter IPs. Measured 2026-07-27, `google/gemma-4-26b-a4b-it:free`
+    # matched Gemini's 7/7 foods on a test plate but took ~16 s instead of ~2 s.
+    openrouter_api_key: str = ""
+    openrouter_vision_model: str = "google/gemma-4-26b-a4b-it:free"
     # Upload guardrail: plenty for a phone photo, small enough to bound memory
     # and the provider's token cost.
     vision_max_image_bytes: int = 5 * 1024 * 1024

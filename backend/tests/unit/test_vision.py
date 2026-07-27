@@ -10,7 +10,7 @@ from app.application.use_cases.nutrition_use_cases import (
 )
 from app.domain.entities.estimated_food import EstimatedFood
 from app.domain.ports.vision import VisionPort, VisionUnavailableError
-from app.infrastructure.ai.vision import GeminiVision, StubVision
+from app.infrastructure.ai.vision import GeminiVision, OpenRouterVision, StubVision
 
 IMAGE = b"\xff\xd8\xff\xe0 fake jpeg bytes"
 
@@ -146,3 +146,65 @@ async def test_analyze_meal_photo_accepts_a_charset_suffixed_mime() -> None:
     # Browsers may send `image/jpeg; charset=binary`.
     result = await AnalyzeMealPhoto(StubVision(), 1024).execute(IMAGE, "image/jpeg; charset=binary")
     assert result.items
+
+
+async def test_openrouter_vision_parses_a_fenced_reply_and_sends_a_data_uri(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Open models often wrap the JSON in a ```json fence; it must still parse.
+    captured: dict[str, object] = {}
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        captured["url"] = url
+        captured["json"] = kwargs["json"]
+        captured["headers"] = kwargs["headers"]
+        body = {
+            "choices": [
+                {
+                    "message": {
+                        "content": '```json\n{"items":[{"name":"paella","grams":350,'
+                        '"kcal":550,"protein_g":18,"carbs_g":60,"fat_g":15}]}\n```'
+                    }
+                }
+            ]
+        }
+        return httpx.Response(200, json=body, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    items = await OpenRouterVision("k", "google/gemma-4-26b-a4b-it:free").analyze_meal(
+        IMAGE, "image/jpeg"
+    )
+
+    assert [item.name for item in items] == ["paella"]
+    assert captured["url"] == OpenRouterVision._ENDPOINT
+    assert captured["headers"] == {"Authorization": "Bearer k"}  # type: ignore[comparison-overlap]
+    body = captured["json"]
+    assert isinstance(body, dict)
+    image_part = body["messages"][1]["content"][1]
+    assert image_part["image_url"]["url"].startswith("data:image/jpeg;base64,")
+
+
+async def test_openrouter_vision_handles_a_200_without_choices(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Upstream provider errors can arrive as a 200 whose body has no choices.
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"error": {"message": "rate-limited upstream"}},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    assert await OpenRouterVision("k", "m").analyze_meal(IMAGE, "image/jpeg") == []
+
+
+async def test_openrouter_vision_raises_unavailable_on_http_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_post(self: httpx.AsyncClient, url: str, **kwargs: object) -> httpx.Response:
+        return httpx.Response(429, json={"error": "quota"}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    with pytest.raises(VisionUnavailableError):
+        await OpenRouterVision("k", "m").analyze_meal(IMAGE, "image/jpeg")
