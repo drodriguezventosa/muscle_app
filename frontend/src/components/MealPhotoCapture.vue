@@ -6,6 +6,9 @@ import { useI18n } from 'vue-i18n'
 // getUserMedia works on desktop (webcam) and mobile (rear camera) over HTTPS or
 // localhost; if it is unavailable or denied we show the file picker instead.
 const emit = defineEmits<{ captured: [blob: Blob] }>()
+// `busy` is owned by the parent (it runs the upload), so the buttons stay
+// disabled until the analysis finishes and a double submit is impossible.
+const props = withDefaults(defineProps<{ busy?: boolean }>(), { busy: false })
 
 const { t } = useI18n()
 
@@ -100,10 +103,12 @@ onBeforeUnmount(stop)
 
 <template>
   <div class="capture">
-    <button type="button" class="cap-btn primary" @click="start">
-      <span aria-hidden="true">📷</span> {{ t('nutrition.photo.take') }}
+    <button type="button" class="cap-btn primary" :disabled="props.busy" @click="start">
+      <span v-if="props.busy" class="cap-spinner" aria-hidden="true"></span>
+      <span v-else aria-hidden="true">📷</span>
+      {{ props.busy ? t('nutrition.photo.analyzing') : t('nutrition.photo.take') }}
     </button>
-    <button type="button" class="cap-btn" @click="pickFile">
+    <button type="button" class="cap-btn" :disabled="props.busy" @click="pickFile">
       <span aria-hidden="true">🖼️</span> {{ t('nutrition.photo.upload') }}
     </button>
     <!-- `capture` hints the rear camera on mobile when used as the fallback -->
@@ -180,6 +185,27 @@ onBeforeUnmount(stop)
   border-color: transparent;
   color: #06121a;
   font-weight: 700;
+}
+/* In-button spinner, tinted for the gradient background. */
+.cap-spinner {
+  display: inline-block;
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(6, 18, 26, 0.3);
+  border-top-color: #06121a;
+  border-radius: 50%;
+  animation: cap-rotate 0.7s linear infinite;
+}
+@keyframes cap-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cap-spinner {
+    animation-duration: 2s;
+  }
 }
 .sr-only {
   position: absolute;

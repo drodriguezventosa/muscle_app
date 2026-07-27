@@ -58,4 +58,28 @@ describe('NutritionView meal photo', () => {
     expect(wrapper.find('.photo-msg.error').exists()).toBe(true)
     expect(wrapper.find('.menu-item').exists()).toBe(false)
   })
+
+  it('shows a spinner and blocks the buttons while the photo is analysed', async () => {
+    // Keep the request pending so the loading state is observable.
+    let resolve!: (value: unknown) => void
+    analyzeMealPhoto.mockReturnValue(new Promise((r) => (resolve = r)))
+    const wrapper = mount(NutritionView, { global: { plugins: [i18n] } })
+    await flushPromises()
+
+    const capture = wrapper.getComponent({ name: 'MealPhotoCapture' })
+    capture.vm.$emit('captured', new Blob(['x']))
+    await flushPromises()
+
+    expect(wrapper.find('.photo-msg.loading .spinner').exists()).toBe(true)
+    expect(capture.props('busy')).toBe(true)
+    expect(capture.findAll('button').every((b) => b.attributes('disabled') !== undefined)).toBe(
+      true,
+    )
+
+    resolve({ note: 'listo', available: true, items: [] })
+    await flushPromises()
+
+    expect(wrapper.find('.spinner').exists()).toBe(false)
+    expect(capture.props('busy')).toBe(false)
+  })
 })
