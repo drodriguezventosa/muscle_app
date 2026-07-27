@@ -36,6 +36,9 @@ export default {
     menu: 'Menú',
   },
   auth: {
+    title: 'Entrar',
+    close: 'Cerrar',
+    howToEnter: '¿Cómo quieres entrar?',
     eyebrow: 'Área de entrenadores',
     titleHighlight: 'Entra',
     titleRest: 'a tu espacio',

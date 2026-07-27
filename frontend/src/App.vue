@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 
 import ChatWidget from '@/components/ChatWidget.vue'
 import GuidedTour, { type TourStep } from '@/components/GuidedTour.vue'
+import LoginModal from '@/components/LoginModal.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -119,10 +120,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <span class="session-name">{{ auth.user?.name }}</span>
       <span class="session-out">{{ t('auth.signOut') }}</span>
     </button>
-    <RouterLink v-else to="/login" class="session-btn">
+    <button v-else class="session-btn" type="button" @click="auth.promptSignIn()">
       <span aria-hidden="true">👤</span>
       <span class="session-name">{{ t('auth.signIn') }}</span>
-    </RouterLink>
+    </button>
     <button
       class="help-btn"
       type="button"
@@ -151,6 +152,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
   <!-- Floating assistant, available on every page -->
   <ChatWidget />
+
+  <!-- Sign-in lives in a modal, opened from the header or by the route guard -->
+  <LoginModal v-model="auth.promptOpen" />
 
   <!-- First-visit guided tour (replayable from the header "?" button) -->
   <GuidedTour v-model="showTour" :steps="tourSteps" @finish="onTourFinish" />

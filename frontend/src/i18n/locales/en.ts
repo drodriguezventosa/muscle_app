@@ -36,6 +36,9 @@ export default {
     menu: 'Menu',
   },
   auth: {
+    title: 'Sign in',
+    close: 'Close',
+    howToEnter: 'How do you want to sign in?',
     eyebrow: 'Trainers area',
     titleHighlight: 'Sign in',
     titleRest: 'to your space',

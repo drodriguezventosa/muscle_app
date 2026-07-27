@@ -27,11 +27,6 @@ export const router = createRouter({
       component: () => import('@/views/ProgressView.vue'),
     },
     {
-      path: '/login',
-      name: 'login',
-      component: () => import('@/views/LoginView.vue'),
-    },
-    {
       path: '/trainers',
       name: 'trainers',
       component: () => import('@/views/TrainersView.vue'),
@@ -44,5 +39,10 @@ export const router = createRouter({
 router.beforeEach((to) => {
   if (!to.meta.requiresAuth) return true
   // Called inside the guard (not at module scope) so Pinia is already installed.
-  return useAuthStore().isSignedIn ? true : { name: 'login', query: { redirect: to.fullPath } }
+  const auth = useAuthStore()
+  if (auth.isSignedIn) return true
+  // Sign-in is a modal, not a page: block the navigation and open it, keeping
+  // the intended route so the user lands there afterwards.
+  auth.promptSignIn(to.fullPath)
+  return false
 })

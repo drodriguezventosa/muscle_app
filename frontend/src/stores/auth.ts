@@ -31,6 +31,10 @@ export const useAuthStore = defineStore('auth', () => {
   const expiresAt = ref<number>(restored?.expiresAt ?? 0)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  // Set by the router guard when it blocks a protected route: the modal opens
+  // and, once signed in, the user continues where they were headed.
+  const promptOpen = ref(false)
+  const pendingRedirect = ref<string | null>(null)
 
   setAccessToken(token.value) // so the very first request after a reload is authenticated
 
@@ -66,10 +70,35 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function promptSignIn(redirectTo?: string): void {
+    pendingRedirect.value = redirectTo ?? null
+    error.value = null
+    promptOpen.value = true
+  }
+
+  /** Read and clear the route the user was blocked from. */
+  function consumeRedirect(): string | null {
+    const target = pendingRedirect.value
+    pendingRedirect.value = null
+    return target
+  }
+
   function signOut(): void {
     apply(null)
     error.value = null
   }
 
-  return { user, token, isSignedIn, isTrainer, loading, error, signIn, signOut }
+  return {
+    user,
+    token,
+    isSignedIn,
+    isTrainer,
+    loading,
+    error,
+    promptOpen,
+    signIn,
+    signOut,
+    promptSignIn,
+    consumeRedirect,
+  }
 })
