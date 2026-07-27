@@ -231,12 +231,6 @@ const kcalPct = computed(() => pct(totals.value.kcal, store.result?.calories))
     <div class="card glass menu-builder animate-in" style="animation-delay: 0.18s">
       <h2 class="mb-title">{{ t('nutrition.menu.title') }}</h2>
       <p class="mb-lead">{{ t('nutrition.menu.lead') }}</p>
-      <input
-        v-model="search"
-        class="search"
-        type="search"
-        :placeholder="t('nutrition.menu.search')"
-      />
       <!-- Photo → estimated foods, added as normal (editable) menu items -->
       <div class="photo-block">
         <MealPhotoCapture :busy="photoLoading" @captured="onPhoto" />
@@ -265,6 +259,14 @@ const kcalPct = computed(() => pct(totals.value.kcal, store.result?.calories))
           </button>
         </li>
       </ul>
+      <!-- Search sits under the shortlist: the catalog is long, so the visible
+           foods come first and the box is there to reach the rest. -->
+      <input
+        v-model="search"
+        class="search"
+        type="search"
+        :placeholder="t('nutrition.menu.search')"
+      />
 
       <div v-if="menu.length" class="menu">
         <div v-for="(item, i) in menu" :key="item.food.id" class="menu-item">
