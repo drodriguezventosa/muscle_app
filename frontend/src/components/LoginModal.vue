@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import { useAuthStore } from '@/stores/auth'
+import { useProgressStore } from '@/stores/progress'
 
 // There is no public sign-up: only these two seeded accounts exist, and their
 // credentials are shown on purpose so the app can be reviewed without asking
@@ -20,6 +21,7 @@ const emit = defineEmits<{ 'update:modelValue': [boolean] }>()
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const progress = useProgressStore()
 const router = useRouter()
 
 // Signing in as a student is the common case, so it is the default.
@@ -45,6 +47,8 @@ function close(): void {
 async function submit(): Promise<void> {
   if (!(await auth.signIn(email.value, password.value))) return
   close()
+  // Whatever the browser recorded before signing in belongs to this account now.
+  void progress.sync()
   // Land on the area for the role: a trainer manages students, a student looks
   // for a trainer. A blocked route (from the guard) still wins.
   const target = auth.consumeRedirect() ?? (auth.isTrainer ? '/students' : '/trainers')

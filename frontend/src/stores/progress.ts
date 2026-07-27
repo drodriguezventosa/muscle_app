@@ -1,14 +1,20 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-// Client-side workout progress (ADR-0011): logs live in the browser's
-// localStorage — no login, no backend, nothing leaves the device. Keyed by the
-// catalog exercise id so history survives routine regeneration.
+import { syncProgress, type ProfileSync, type SessionSync } from '@/api/coaching'
+import { useAuthStore } from '@/stores/auth'
+
+// Workout progress stays offline-first (ADR-0011): logs live in the browser's
+// localStorage, keyed by the catalog exercise id so history survives routine
+// regeneration. Signing in adds a mirror — `sync()` pushes the same history to
+// the server so a trainer can follow it — but never a dependency: everything
+// here keeps working while signed out or offline.
 
 export interface SessionLog {
   date: string // YYYY-MM-DD
   weight: number // kg (0 = bodyweight)
   completed: boolean // hit all sets at the target reps
+  reps?: number // target reps of the session, needed to estimate a 1RM
 }
 
 interface Persisted {
@@ -31,7 +37,10 @@ function loadState(): Persisted {
 }
 
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  // The user's own day, not UTC: east of Greenwich, a session logged after
+  // midnight would otherwise be filed as yesterday's.
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
 }
 
 export const useProgressStore = defineStore('progress', () => {
@@ -72,13 +81,45 @@ export const useProgressStore = defineStore('progress', () => {
     name: string,
     weight: number,
     completed: boolean,
+    reps?: number,
     date: string = todayISO(),
   ): void {
-    const entries = [...history(exerciseId), { date, weight, completed }]
+    const entries = [...history(exerciseId), { date, weight, completed, reps }]
     entries.sort((a, b) => a.date.localeCompare(b.date))
     logs.value = { ...logs.value, [exerciseId]: entries }
     names.value = { ...names.value, [exerciseId]: name }
     persist()
+  }
+
+  /** Every stored session, flattened into what the API expects. */
+  function pending(): SessionSync[] {
+    return Object.entries(logs.value).flatMap(([exerciseId, entries]) =>
+      entries.map((entry) => ({
+        exerciseId: Number(exerciseId),
+        loggedOn: entry.date,
+        weightKg: entry.weight,
+        reps: entry.reps ?? 0,
+        completed: entry.completed,
+      })),
+    )
+  }
+
+  /**
+   * Mirror the local history onto the server, best effort.
+   *
+   * Only for signed-in students: a trainer has no progress of their own, and a
+   * visitor has no account to attach it to. Failures are swallowed on purpose —
+   * localStorage is the source of truth, so a network hiccup must not surface
+   * as an error in the middle of a workout.
+   */
+  async function sync(profile: ProfileSync = {}): Promise<void> {
+    const auth = useAuthStore()
+    if (!auth.isSignedIn || auth.isTrainer) return
+    try {
+      await syncProgress(pending(), profile)
+    } catch {
+      // Retried on the next logged session or sign-in.
+    }
   }
 
   function clearAll(): void {
@@ -87,5 +128,5 @@ export const useProgressStore = defineStore('progress', () => {
     persist()
   }
 
-  return { logs, names, history, last, best, suggested, isRecord, log, clearAll }
+  return { logs, names, history, last, best, suggested, isRecord, log, pending, sync, clearAll }
 })

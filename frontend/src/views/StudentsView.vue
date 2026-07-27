@@ -1,16 +1,67 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { ASSIGNABLE, STUDENTS, type Student } from '@/data/coaching'
+import {
+  getStudent,
+  listStudents,
+  type StudentDashboard,
+  type StudentSummary,
+} from '@/api/coaching'
+import { ASSIGNABLE } from '@/data/coaching'
 import { useCoachingStore } from '@/stores/coaching'
 
-// Trainer-only area (the route is guarded): the people this coach follows.
-// The evolution charts land here in the next phase, once the coaching tables
-// hold real history.
-const { t } = useI18n()
+// Trainer-only area (the route is guarded): the people this coach follows, with
+// the history they have actually logged. The charts land in the next phase; the
+// numbers below already come from the server.
+const { t, locale } = useI18n()
 const coaching = useCoachingStore()
-const selected = ref<Student | null>(null)
+
+const students = ref<StudentSummary[]>([])
+const selected = ref<StudentSummary | null>(null)
+const dashboard = ref<StudentDashboard | null>(null)
+const loading = ref(true)
+const loadingDetail = ref(false)
+const error = ref(false)
+
+onMounted(async () => {
+  try {
+    students.value = await listStudents()
+  } catch {
+    error.value = true
+  } finally {
+    loading.value = false
+  }
+})
+
+async function select(student: StudentSummary): Promise<void> {
+  selected.value = student
+  dashboard.value = null
+  loadingDetail.value = true
+  try {
+    dashboard.value = await getStudent(student.id)
+  } catch {
+    error.value = true
+  } finally {
+    loadingDetail.value = false
+  }
+}
+
+// Exercise names are localized server-side, so a language switch reloads them.
+watch(locale, () => {
+  if (selected.value) void select(selected.value)
+})
+
+function daysSince(day: string | null): number | null {
+  if (!day) return null
+  const diff = Date.now() - new Date(`${day}T00:00:00`).getTime()
+  return Math.max(0, Math.floor(diff / 86_400_000))
+}
+
+/** Latest estimated 1RM of a progression, which is the last point. */
+function current(points: { value: number }[]): number {
+  return points.length ? points[points.length - 1].value : 0
+}
 </script>
 
 <template>
@@ -25,23 +76,39 @@ const selected = ref<Student | null>(null)
     </header>
 
     <!-- Coach dashboard -->
-    <div class="coach">
+    <p v-if="loading" class="hint">{{ t('students.loading') }}</p>
+    <p v-else-if="error && !students.length" class="hint error" role="alert">
+      {{ t('students.error') }}
+    </p>
+    <p v-else-if="!students.length" class="hint">{{ t('students.empty') }}</p>
+
+    <div v-else class="coach">
       <ul class="students">
-        <li v-for="st in STUDENTS" :key="st.id">
+        <li v-for="st in students" :key="st.id">
           <button
             type="button"
             class="student"
             :class="{ on: selected?.id === st.id }"
-            @click="selected = st"
+            @click="select(st)"
           >
-            <span class="avatar sm" aria-hidden="true">{{ st.initials }}</span>
+            <span class="avatar sm" aria-hidden="true">{{ st.name.slice(0, 1) }}</span>
             <span class="student-info">
               <span class="student-name">{{ st.name }}</span>
               <span class="student-meta">
-                {{ t(`goal.${st.goal}`) }} · {{ t(`difficulty.${st.level}`) }} ·
-                {{ t('trainers.lastActive', { n: st.lastActiveDays }) }}
+                <template v-if="st.goal">{{ t(`goal.${st.goal}`) }} · </template>
+                <template v-if="st.level">{{ t(`difficulty.${st.level}`) }} · </template>
+                <template v-if="daysSince(st.lastSessionOn) !== null">
+                  {{ t('students.lastActive', daysSince(st.lastSessionOn) ?? 0) }}
+                </template>
+                <template v-else>{{ t('students.never') }}</template>
               </span>
             </span>
+            <span
+              class="streak"
+              :class="{ low: st.sessionsLast30d < 8 }"
+              :title="t('students.kpiSessions30')"
+              >{{ st.sessionsLast30d }}</span
+            >
           </button>
         </li>
       </ul>
@@ -51,14 +118,49 @@ const selected = ref<Student | null>(null)
         <template v-else>
           <h2 class="detail-name">{{ selected.name }}</h2>
 
-          <h3 class="section">{{ t('trainers.studentProgress') }}</h3>
-          <ul class="progress-list">
-            <li v-for="p in selected.progress" :key="p.exercise" class="progress-row">
-              <span class="ex">{{ p.exercise }}</span>
-              <span class="stat"
-                >{{ t('trainers.best') }} {{ p.best }} kg · {{ p.sessions }}
-                {{ t('trainers.sessions') }}</span
+          <!-- Headline numbers, straight from the student's logged history. -->
+          <ul class="kpis">
+            <li class="kpi">
+              <span class="kpi-value">{{ dashboard?.totalSessions ?? '—' }}</span>
+              <span class="kpi-label">{{ t('students.kpiTotal') }}</span>
+            </li>
+            <li class="kpi">
+              <span class="kpi-value">{{ selected.sessionsLast30d }}</span>
+              <span class="kpi-label">{{ t('students.kpiSessions30') }}</span>
+            </li>
+            <li class="kpi">
+              <span class="kpi-value"
+                >{{ selected.weightKg ?? '—' }}<small v-if="selected.weightKg"> kg</small></span
               >
+              <span class="kpi-label">
+                {{ t('students.kpiWeight') }}
+                <template v-if="dashboard?.weightChangeKg">
+                  ({{ dashboard.weightChangeKg > 0 ? '+' : '' }}{{ dashboard.weightChangeKg }})
+                </template>
+              </span>
+            </li>
+            <li class="kpi">
+              <span class="kpi-value">{{ selected.bmi ?? '—' }}</span>
+              <span class="kpi-label">
+                {{ t('students.kpiBmi') }}
+                <template v-if="selected.age"
+                  >· {{ t('students.years', { n: selected.age }) }}</template
+                >
+              </span>
+            </li>
+          </ul>
+
+          <h3 class="section">{{ t('students.strengthTitle') }}</h3>
+          <p v-if="loadingDetail" class="hint">{{ t('students.loading') }}</p>
+          <p v-else-if="!dashboard?.strength.length" class="hint">{{ t('students.noStrength') }}</p>
+          <ul v-else class="progress-list">
+            <li v-for="p in dashboard.strength" :key="p.exerciseId" class="progress-row">
+              <span class="ex">{{ p.exerciseName }}</span>
+              <span class="stat">
+                {{ current(p.points) }} kg ·
+                {{ t('students.sessionsCount', { n: p.points.length }, p.points.length) }}
+                <span v-if="p.gainPct > 0" class="gain">+{{ p.gainPct }}%</span>
+              </span>
             </li>
           </ul>
 
@@ -291,6 +393,61 @@ h1 {
 .student-meta {
   font-size: 0.78rem;
   color: var(--color-muted);
+}
+/* Sessions in the last 30 days: the one number that says "chase this one". */
+.streak {
+  margin-left: auto;
+  flex: none;
+  min-width: 28px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+.streak.low {
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+  color: var(--color-danger);
+}
+.kpis {
+  list-style: none;
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--space-xs);
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-strong);
+}
+.kpi-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.kpi-value small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.kpi-label {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+}
+.gain {
+  margin-left: 6px;
+  color: var(--color-accent);
+  font-weight: 700;
+}
+.hint.error {
+  color: var(--color-danger);
 }
 .detail {
   padding: var(--space-lg);

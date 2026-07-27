@@ -26,12 +26,26 @@ function fmtRest(seconds: number): string {
   return seconds >= 60 ? `${Math.round(seconds / 60)} min` : `${seconds}s`
 }
 
+/** First number of a target like "8-12": what the session is worth in reps. */
+function targetReps(reps: string): number {
+  return Number.parseInt(reps, 10) || 0
+}
+
 function logItem(item: WorkoutItem): void {
   const id = item.exercise.id
   const weight = weightInput[id] ?? progress.suggested(id)
   if (weight == null || weight < 0) return
-  progress.log(id, item.exercise.name, weight, allSetsDone[id] ?? true)
+  progress.log(id, item.exercise.name, weight, allSetsDone[id] ?? true, targetReps(item.reps))
   weightInput[id] = null
+  // Mirror it for the trainer, together with the attributes typed above. Only
+  // does anything when signed in as a student; never blocks the UI.
+  void progress.sync({
+    weightKg: store.weightKg ?? undefined,
+    heightCm: store.heightCm ?? undefined,
+    age: store.age ?? undefined,
+    goal: store.goal,
+    level: store.experience,
+  })
 }
 
 // Default the "all sets" checkbox to checked for each exercise in a new routine.
