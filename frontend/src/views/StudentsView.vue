@@ -54,6 +54,13 @@ onMounted(async () => {
 let pendingRequest = 0
 
 async function select(student: StudentSummary): Promise<void> {
+  // Clicking the selected student again clears the selection, which brings the
+  // group overview back: the roster chart is the other half of this panel.
+  if (selected.value?.id === student.id) {
+    selected.value = null
+    dashboard.value = null
+    return
+  }
   const request = ++pendingRequest
   selected.value = student
   // The previous student's data is dropped straight away — stale numbers under
@@ -178,6 +185,7 @@ const rosterPoints = computed<ScatterPoint[]>(() =>
             type="button"
             class="student"
             :class="{ on: selected?.id === st.id }"
+            :aria-pressed="selected?.id === st.id"
             @click="select(st)"
           >
             <span class="avatar sm" aria-hidden="true">{{ initialsOf(st.name) }}</span>

@@ -6,12 +6,15 @@ the AI phase. `name`/`description`/`video_url` hold Spanish; `*_en` hold English
 """
 
 import asyncio
+import math
 import random
 import secrets
 from dataclasses import dataclass
 from datetime import date, timedelta
+from functools import lru_cache
 
-from sqlalchemy import func, select
+from sqlalchemy import func, insert, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -27,6 +30,7 @@ from app.infrastructure.persistence.database import get_session_factory
 from app.infrastructure.persistence.models.coaching import (
     BodyMetricModel,
     StudentProfileModel,
+    TrainerProfileModel,
     TrainerStudentModel,
     WorkoutLogModel,
 )
@@ -1310,6 +1314,70 @@ DEMO_USERS: list[tuple[str, str, UserRole]] = [
 ]
 
 
+@dataclass(frozen=True)
+class _TrainerSeed:
+    """A trainer on offer. Only the advertised one can sign in."""
+
+    name: str
+    email: str
+    specialty: Goal
+    rating: float
+    price_per_month: int
+    bio: str
+    bio_en: str
+
+
+# The first is the demo account; the rest exist so a student has a real choice.
+DEMO_TRAINERS: list[_TrainerSeed] = [
+    _TrainerSeed(
+        name="Ana López",
+        email="entrenador@demo.muscleapp",
+        specialty=Goal.STRENGTH,
+        rating=4.9,
+        price_per_month=39,
+        bio="Fuerza y técnica. Progresiones medidas, sin prisa.",
+        bio_en="Strength and technique. Measured progressions, no rush.",
+    ),
+    _TrainerSeed(
+        name="Marco Ruiz",
+        email="marco@demo.muscleapp",
+        specialty=Goal.HYPERTROPHY,
+        rating=4.8,
+        price_per_month=45,
+        bio="Hipertrofia con volumen ajustado a lo que puedas recuperar.",
+        bio_en="Hypertrophy with the volume you can actually recover from.",
+    ),
+    _TrainerSeed(
+        name="Sara Gil",
+        email="sara@demo.muscleapp",
+        specialty=Goal.FAT_LOSS,
+        rating=5.0,
+        price_per_month=35,
+        bio="Pérdida de grasa sostenible: fuerza, cardio y hábitos.",
+        bio_en="Sustainable fat loss: lifting, cardio and habits.",
+    ),
+    _TrainerSeed(
+        name="Leo Torres",
+        email="leo@demo.muscleapp",
+        specialty=Goal.HYPERTROPHY,
+        rating=4.7,
+        price_per_month=29,
+        bio="Rutinas sencillas para empezar y no abandonar.",
+        bio_en="Simple routines to start with and stick to.",
+    ),
+]
+
+
+@lru_cache(maxsize=2)
+def _hash_once(password: str) -> str:
+    """Argon2 is deliberately slow, so hash a given password once per process.
+
+    The seed runs on every boot and, in the tests, once per case: hashing ten
+    accounts each time was costing more than the rest of the seed together.
+    """
+    return Argon2Hasher().hash(password)
+
+
 async def _seed_users(session: AsyncSession, password: str) -> int:
     """Insert the missing demo accounts and roster students, keyed by email.
 
@@ -1326,26 +1394,32 @@ async def _seed_users(session: AsyncSession, password: str) -> int:
         (student.name, student.email, UserRole.CLIENT)
         for student in DEMO_STUDENTS
         if student.email not in known and student.email not in advertised
+    ] + [
+        (trainer.name, trainer.email, UserRole.TRAINER)
+        for trainer in DEMO_TRAINERS
+        if trainer.email not in known and trainer.email not in advertised
     ]
     if not missing and not roster:
         return 0
-    hasher = Argon2Hasher()
-    demo_hash = hasher.hash(password)
-    session.add_all(
-        UserModel(name=name, email=email, role=role, password_hash=demo_hash)
+    demo_hash = _hash_once(password)
+    # One unusable hash for the whole roster: they are data, not accounts, and
+    # nobody holds the secret either way.
+    locked_hash = _hash_once(secrets.token_urlsafe(32))
+    rows = [
+        {"name": name, "email": email, "role": role, "password_hash": demo_hash}
         for name, email, role in missing
-    )
-    session.add_all(
-        UserModel(
-            name=name,
-            email=email,
-            role=role,
-            password_hash=hasher.hash(secrets.token_urlsafe(32)),
-        )
+    ] + [
+        {"name": name, "email": email, "role": role, "password_hash": locked_hash}
         for name, email, role in roster
+    ]
+    # DO NOTHING on the email rather than trusting the read above: two sessions
+    # can seed at once (the test fixtures do), and losing that race must not
+    # raise — the row exists either way, which is all the caller needs.
+    await session.execute(
+        pg_insert(UserModel).on_conflict_do_nothing(index_elements=[UserModel.email]), rows
     )
     await session.commit()
-    return len(missing) + len(roster)
+    return len(rows)
 
 
 @dataclass(frozen=True)
@@ -1485,10 +1559,20 @@ DEMO_STUDENTS: list[_StudentSeed] = [
     ),
 ]
 
-# Twelve weeks of history: long enough for a trend, short enough to seed fast.
-HISTORY_WEEKS = 12
+# The demo year: the calendar and the charts cover it end to end, so navigating
+# to any week of 2026 shows a plan and a trained (or missed) session.
+DEMO_YEAR = 2026
 # Monday, Wednesday and Friday.
 _TRAINING_WEEKDAYS = (0, 2, 4)
+# Weeks it takes to reach most of a lift's yearly progress. Real strength gains
+# are fast at first and flatten; a straight line would put a beginner's squat
+# past 200 kg by December.
+_PROGRESS_TIME_CONSTANT = 14.0
+# Total gain over the year, as a share of the starting load.
+_YEARLY_GAIN = 0.35
+# Every so often a lighter week: deloads are part of any real plan.
+_DELOAD_EVERY = 9
+_DELOAD_FACTOR = 0.9
 
 
 def _plate_rounded(weight: float) -> float:
@@ -1496,25 +1580,72 @@ def _plate_rounded(weight: float) -> float:
     return round(weight / 2.5) * 2.5
 
 
+def _demo_weeks(today: date, weeks: int | None) -> list[tuple[int, date]]:
+    """The Mondays to write, paired with their week number in the plan.
+
+    The default is every week of the demo year, which is what makes the deployed
+    app feel lived-in. `weeks` trims that to a window around today — the tests
+    re-seed a fresh schema for every case, and a full year each time turned a
+    one-minute suite into eight.
+    """
+    first = date(DEMO_YEAR, 1, 1)
+    monday = first - timedelta(days=first.weekday())
+    numbered: list[tuple[int, date]] = []
+    number = 0
+    while monday <= date(DEMO_YEAR, 12, 31):
+        numbered.append((number, monday))
+        monday += timedelta(weeks=1)
+        number += 1
+    if weeks is None:
+        return numbered
+    # Keep the weeks around today: some trained, some still ahead.
+    this_monday = today - timedelta(days=today.weekday())
+    lower = this_monday - timedelta(weeks=weeks - 1)
+    upper = this_monday + timedelta(weeks=1)
+    return [(number, day) for number, day in numbered if lower <= day <= upper]
+
+
+def _load_at(start_kg: float, week: int) -> float:
+    """The load for a lift on a given week of the plan.
+
+    Asymptotic rather than linear, with a deload every few weeks, so a year of
+    training reads like training instead of arithmetic.
+    """
+    if not start_kg:
+        return 0.0
+    progress = 1 - math.exp(-week / _PROGRESS_TIME_CONSTANT)
+    load = start_kg * (1 + _YEARLY_GAIN * progress)
+    if week and week % _DELOAD_EVERY == 0:
+        load *= _DELOAD_FACTOR
+    return _plate_rounded(load)
+
+
 def _generate_history(
     student: _StudentSeed,
     exercise_ids: dict[str, int],
     today: date,
     rng: random.Random,
+    *,
+    reliable_this_week: bool = False,
+    weeks: int | None = None,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    """Build (workout logs, body metrics) for one student over `HISTORY_WEEKS`.
+    """Build (workout logs, body metrics) for one student across the demo year.
 
-    Deterministic given the same seed, so re-seeding a database produces the
-    same story instead of a different one every time.
+    Only up to today: the rest of the year is scheduled, not trained. The body
+    weight drifts toward the goal with a little noise so the line looks measured
+    rather than computed. Deterministic given the same seed, so re-seeding tells
+    the same story instead of a new one.
+
+    `reliable_this_week` writes the current week as trained on target. It is for
+    the account the app is demonstrated with: whether that week came out well is
+    a coin toss the demo should not depend on, and every other week still shows
+    the misses and the shortfalls.
     """
     logs: list[dict[str, object]] = []
     metrics: list[dict[str, object]] = []
-    first_monday = today - timedelta(days=today.weekday(), weeks=HISTORY_WEEKS - 1)
+    this_monday = today - timedelta(days=today.weekday())
 
-    for week in range(HISTORY_WEEKS):
-        monday = first_monday + timedelta(weeks=week)
-        # A weekly weigh-in that drifts toward the goal, with a little noise so
-        # the line looks measured rather than computed.
+    for week, monday in _demo_weeks(today, weeks):
         weight = student.start_weight_kg + student.weekly_weight_delta * week
         if monday <= today:
             metrics.append(
@@ -1526,28 +1657,61 @@ def _generate_history(
 
         for weekday in _TRAINING_WEEKDAYS:
             day = monday + timedelta(days=weekday)
-            if day > today or rng.random() > student.adherence:
+            if day > today or day.year != DEMO_YEAR:
                 continue
-            for name, start_kg, reps, weekly_gain in student.lifts:
+            showcase = reliable_this_week and monday == this_monday
+            if not showcase and rng.random() > student.adherence:
+                continue  # a session they skipped
+            for name, start_kg, reps, _ in student.lifts:
                 exercise_id = exercise_ids.get(name)
                 if exercise_id is None:  # catalog changed; skip rather than fail
                     continue
-                lifted = _plate_rounded(start_kg + weekly_gain * week) if start_kg else 0.0
+                completed = showcase or rng.random() < 0.85
                 logs.append(
                     {
                         "exercise_id": exercise_id,
                         "logged_on": day,
-                        "weight_kg": lifted,
+                        "weight_kg": _load_at(start_kg, week),
                         # Bodyweight work progresses in reps instead of kilos.
-                        "reps": reps if start_kg else reps + week // 3,
-                        "completed": rng.random() < 0.85,
+                        "reps": reps if start_kg else reps + week // 6,
+                        "sets": 3 if completed else rng.choice((1, 2)),
+                        "completed": completed,
                     }
                 )
     return logs, metrics
 
 
-async def _seed_coaching(session: AsyncSession) -> int:
-    """Give the demo trainer a roster with twelve weeks of history.
+async def _seed_trainer_profiles(session: AsyncSession) -> int:
+    """Give every demo trainer the offer shown on their card.
+
+    Merged so a curated change (a price, a bio) reaches an already-seeded
+    database, but only genuinely new rows are counted: the caller reports
+    "something was inserted", and re-running must be able to say no.
+    """
+    known = set((await session.scalars(select(TrainerProfileModel.user_id))).all())
+    inserted = 0
+    for trainer in DEMO_TRAINERS:
+        user_id = await session.scalar(select(UserModel.id).where(UserModel.email == trainer.email))
+        if user_id is None:
+            continue
+        await session.merge(
+            TrainerProfileModel(
+                user_id=user_id,
+                specialty=trainer.specialty,
+                rating=trainer.rating,
+                price_per_month=trainer.price_per_month,
+                bio=trainer.bio,
+                bio_en=trainer.bio_en,
+            )
+        )
+        if user_id not in known:
+            inserted += 1
+    await session.commit()
+    return inserted
+
+
+async def _seed_coaching(session: AsyncSession, weeks: int | None = None) -> int:
+    """Give the demo trainer a roster with a year of history behind it.
 
     Skips any student that already has logs, so running the seed again (every
     boot, in the deployed app) neither duplicates rows nor overwrites the real
@@ -1580,14 +1744,17 @@ async def _seed_coaching(session: AsyncSession) -> int:
                 level=student.level,
             )
         )
+        # One trainer per student, so the check is on the student alone: a demo
+        # student who hired someone else keeps their choice.
         linked = await session.scalar(
-            select(TrainerStudentModel.id).where(
-                TrainerStudentModel.trainer_id == trainer_id,
-                TrainerStudentModel.student_id == user_id,
-            )
+            select(TrainerStudentModel.id).where(TrainerStudentModel.student_id == user_id)
         )
         if linked is None:
-            session.add(TrainerStudentModel(trainer_id=trainer_id, student_id=user_id))
+            await session.execute(
+                pg_insert(TrainerStudentModel)
+                .values(trainer_id=trainer_id, student_id=user_id)
+                .on_conflict_do_nothing(constraint="uq_trainer_student")
+            )
 
         has_history = await session.scalar(
             select(WorkoutLogModel.id).where(WorkoutLogModel.user_id == user_id).limit(1)
@@ -1597,9 +1764,26 @@ async def _seed_coaching(session: AsyncSession) -> int:
         # Fixed seed per student: the same demo data on every machine. Not a
         # security context — this only shapes fake training history.
         rng = random.Random(index)  # noqa: S311  # nosec B311
-        logs, metrics = _generate_history(student, exercise_ids, today, rng)
-        session.add_all(WorkoutLogModel(user_id=user_id, **log) for log in logs)
-        session.add_all(BodyMetricModel(user_id=user_id, **metric) for metric in metrics)
+        logs, metrics = _generate_history(
+            student,
+            exercise_ids,
+            today,
+            rng,
+            # The first entry is the account the app is demonstrated with.
+            reliable_this_week=student.email == DEMO_STUDENTS[0].email,
+            weeks=weeks,
+        )
+        # Bulk-inserted: a year is a few thousand rows per student, and the ORM
+        # would spend seconds building objects nobody reads. It also keeps the
+        # integration tests quick, since each one re-seeds a fresh schema.
+        if logs:
+            await session.execute(
+                insert(WorkoutLogModel), [{"user_id": user_id, **log} for log in logs]
+            )
+        if metrics:
+            await session.execute(
+                insert(BodyMetricModel), [{"user_id": user_id, **metric} for metric in metrics]
+            )
         seeded += 1
 
     await session.commit()
@@ -1636,12 +1820,16 @@ async def _seed_foods(session: AsyncSession) -> int:
     return len(missing)
 
 
-async def _seed_plan(session: AsyncSession) -> int:
-    """Put this week's routine on each demo student's calendar.
+async def _seed_plan(session: AsyncSession, weeks: int | None = None) -> int:
+    """Write every student's calendar for the whole demo year.
 
-    Written relative to today, so the demo always opens on a week with
-    something in it: past days are already logged (the history seed covers
-    them), today and the rest of the week are still pending.
+    The trainer's plan is the same three lifts on Monday, Wednesday and Friday,
+    with the load stepping up as the year goes on. Past days already have their
+    logs from the history seed, so they show as done, partial or missed; from
+    today on they are pending, which is what makes navigating forward useful.
+
+    Bulk-inserted: this is a few thousand rows, and the ORM would spend a second
+    building objects nobody reads.
     """
     existing = await session.scalar(select(func.count()).select_from(PlanItemModel))
     if existing:
@@ -1660,52 +1848,59 @@ async def _seed_plan(session: AsyncSession) -> int:
         return 0
 
     today = date.today()
-    monday = today - timedelta(days=today.weekday())
-    scheduled = 0
+    rows: list[dict[str, object]] = []
     for student in DEMO_STUDENTS:
         user_id = await session.scalar(select(UserModel.id).where(UserModel.email == student.email))
         if user_id is None:
             continue
-        # The same three lifts the student has been training, on their usual
-        # Monday/Wednesday/Friday, with the next step up as the target.
-        for weekday in _TRAINING_WEEKDAYS:
-            day = monday + timedelta(days=weekday)
-            for name, start_kg, reps, weekly_gain in student.lifts:
-                exercise_id = exercise_ids.get(name)
-                if exercise_id is None:
+        for week, monday in _demo_weeks(today, weeks):
+            for weekday in _TRAINING_WEEKDAYS:
+                day = monday + timedelta(days=weekday)
+                if day.year != DEMO_YEAR:
                     continue
-                target = (
-                    _plate_rounded(start_kg + weekly_gain * (HISTORY_WEEKS + 1))
-                    if start_kg
-                    else None
-                )
-                session.add(
-                    PlanItemModel(
-                        trainer_id=trainer_id,
-                        student_id=user_id,
-                        exercise_id=exercise_id,
-                        scheduled_on=day,
-                        target_sets=3,
-                        target_reps=reps,
-                        target_weight_kg=target,
+                for name, start_kg, reps, _ in student.lifts:
+                    exercise_id = exercise_ids.get(name)
+                    if exercise_id is None:
+                        continue
+                    rows.append(
+                        {
+                            "trainer_id": trainer_id,
+                            "student_id": user_id,
+                            "exercise_id": exercise_id,
+                            "scheduled_on": day,
+                            "target_sets": 3,
+                            "target_reps": reps if start_kg else reps + week // 6,
+                            "target_weight_kg": _load_at(start_kg, week) or None,
+                            "notes": None,
+                        }
                     )
-                )
-                scheduled += 1
 
-    await session.commit()
-    return scheduled
+    if rows:
+        await session.execute(insert(PlanItemModel), rows)
+        await session.commit()
+    return len(rows)
 
 
-async def seed(session: AsyncSession) -> bool:
-    """Populate every catalog that needs it. Returns True if anything was inserted."""
+async def seed(session: AsyncSession, weeks: int | None = None) -> bool:
+    """Populate every catalog that needs it. Returns True if anything was inserted.
+
+    `weeks` trims the demo history and plan to a window around today; the
+    default writes the whole demo year, which is what the deployed app serves.
+    """
     users_inserted = await _seed_users(session, get_settings().demo_password)
     foods_inserted = await _seed_foods(session)
     catalog_inserted = await _seed_catalog(session)
     # Last: the history needs both the demo users and the exercise catalog.
-    coaching_inserted = await _seed_coaching(session)
-    plan_inserted = await _seed_plan(session)
+    trainers_inserted = await _seed_trainer_profiles(session)
+    coaching_inserted = await _seed_coaching(session, weeks)
+    plan_inserted = await _seed_plan(session, weeks)
     return bool(
-        users_inserted or foods_inserted or catalog_inserted or coaching_inserted or plan_inserted
+        users_inserted
+        or foods_inserted
+        or catalog_inserted
+        or trainers_inserted
+        or coaching_inserted
+        or plan_inserted
     )
 
 

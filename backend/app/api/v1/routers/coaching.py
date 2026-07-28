@@ -13,10 +13,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from app.api.v1.deps import (
     CurrentUser,
     TrainerUser,
+    provide_cancel_trainer,
     provide_get_own_progress,
+    provide_hire_trainer,
     provide_list_own_plan,
     provide_list_student_plan,
     provide_list_students,
+    provide_list_trainers,
+    provide_my_trainer,
     provide_report_plan_item,
     provide_schedule_exercise,
     provide_student_dashboard,
@@ -25,11 +29,13 @@ from app.api.v1.deps import (
 )
 from app.api.v1.schemas.coaching import (
     ExerciseProgressionRead,
+    HireTrainerRequest,
     SeriesPointRead,
     StudentDashboardRead,
     StudentRead,
     SyncProgressRequest,
     SyncProgressResponse,
+    TrainerRead,
     WeeklyAdherenceRead,
 )
 from app.api.v1.schemas.plan import (
@@ -39,11 +45,16 @@ from app.api.v1.schemas.plan import (
 )
 from app.application.dto.coaching import ProgressUpdate, StudentDashboard
 from app.application.use_cases.coaching_use_cases import (
+    CancelTrainer,
+    GetMyTrainer,
     GetOwnProgress,
     GetStudentDashboard,
+    HireTrainer,
     ListStudents,
+    ListTrainers,
     StudentNotFoundError,
     SyncProgress,
+    TrainerNotFoundError,
 )
 from app.application.use_cases.plan_use_cases import (
     ListOwnPlan,
@@ -57,7 +68,7 @@ from app.application.use_cases.plan_use_cases import (
     UnscheduleExercise,
 )
 from app.core.rate_limit import RATE_LIMIT, limiter
-from app.domain.entities.coaching import LoggedSession, Student
+from app.domain.entities.coaching import LoggedSession, Student, Trainer
 
 router = APIRouter(prefix="/coaching", tags=["coaching"])
 
@@ -100,6 +111,75 @@ def _to_dashboard_read(dashboard: StudentDashboard) -> StudentDashboardRead:
         total_sessions=dashboard.total_sessions,
         weight_change_kg=dashboard.weight_change_kg,
     )
+
+
+def _to_trainer_read(trainer: Trainer) -> TrainerRead:
+    return TrainerRead(
+        id=trainer.id,
+        name=trainer.name,
+        specialty=trainer.specialty,
+        rating=trainer.rating,
+        price_per_month=trainer.price_per_month,
+        bio=trainer.bio,
+        students=trainer.students,
+    )
+
+
+@router.get(
+    "/trainers",
+    response_model=list[TrainerRead],
+    summary="Trainers a student can hire (public: browsing needs no account)",
+)
+async def list_trainers(
+    use_case: Annotated[ListTrainers, Depends(provide_list_trainers)],
+) -> list[TrainerRead]:
+    return [_to_trainer_read(trainer) for trainer in await use_case.execute()]
+
+
+@router.get(
+    "/me/trainer",
+    response_model=TrainerRead | None,
+    summary="The trainer the signed-in student hired, if any",
+)
+async def my_trainer(
+    user: CurrentUser,
+    use_case: Annotated[GetMyTrainer, Depends(provide_my_trainer)],
+) -> TrainerRead | None:
+    trainer = await use_case.execute(user.id)
+    return _to_trainer_read(trainer) if trainer else None
+
+
+@router.put(
+    "/me/trainer",
+    response_model=TrainerRead,
+    summary="Hire a trainer (replaces the current one: a student has at most one)",
+)
+@limiter.limit(RATE_LIMIT)
+async def hire_trainer(
+    request: Request,  # required by slowapi to identify the client
+    payload: HireTrainerRequest,
+    user: CurrentUser,
+    use_case: Annotated[HireTrainer, Depends(provide_hire_trainer)],
+) -> TrainerRead:
+    try:
+        trainer = await use_case.execute(user.id, payload.trainer_id)
+    except TrainerNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Trainer not found"
+        ) from exc
+    return _to_trainer_read(trainer)
+
+
+@router.delete(
+    "/me/trainer",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Stop working with the current trainer",
+)
+async def cancel_trainer(
+    user: CurrentUser,
+    use_case: Annotated[CancelTrainer, Depends(provide_cancel_trainer)],
+) -> None:
+    await use_case.execute(user.id)
 
 
 @router.get(

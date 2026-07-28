@@ -10,6 +10,7 @@ from app.core.config import get_settings
 from app.infrastructure.persistence.models.exercise import ExerciseModel
 from app.infrastructure.persistence.models.user import UserModel
 from app.infrastructure.persistence.seed import DEMO_STUDENTS, seed
+from tests.integration.conftest import SEED_WEEKS
 
 TRAINER_EMAIL = "entrenador@demo.muscleapp"
 CLIENT_EMAIL = "alumno@demo.muscleapp"
@@ -74,7 +75,7 @@ async def test_the_trainer_gets_a_students_evolution(api_client: AsyncClient) ->
 async def test_a_student_that_is_not_on_the_roster_is_404(
     api_client: AsyncClient, session: AsyncSession
 ) -> None:
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     headers = await _auth(api_client, TRAINER_EMAIL)
     # The trainer's own id is a real user, but not one of their students.
     trainer_id = await session.scalar(select(UserModel.id).where(UserModel.email == TRAINER_EMAIL))
@@ -207,3 +208,78 @@ async def test_sessions_for_unknown_exercises_are_ignored(api_client: AsyncClien
     # A stale browser entry must not fail the whole sync.
     assert response.status_code == 200
     assert response.json()["synced"] == 0
+
+
+async def test_the_trainers_on_offer_are_public(api_client: AsyncClient) -> None:
+    # Browsing needs no account: the sign-in comes when hiring.
+    response = await api_client.get("/api/v1/coaching/trainers")
+
+    assert response.status_code == 200
+    trainers = response.json()
+    assert len(trainers) >= 4
+    assert {"id", "name", "specialty", "rating", "price_per_month", "students"} <= set(trainers[0])
+
+
+async def test_the_seeded_student_already_has_a_trainer(api_client: AsyncClient) -> None:
+    headers = await _auth(api_client, CLIENT_EMAIL)
+    response = await api_client.get("/api/v1/coaching/me/trainer", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Ana López"
+
+
+async def test_hiring_another_trainer_replaces_the_current_one(api_client: AsyncClient) -> None:
+    headers = await _auth(api_client, CLIENT_EMAIL)
+    trainers = (await api_client.get("/api/v1/coaching/trainers")).json()
+    other = next(trainer for trainer in trainers if trainer["name"] != "Ana López")
+
+    hired = await api_client.put(
+        "/api/v1/coaching/me/trainer", json={"trainer_id": other["id"]}, headers=headers
+    )
+
+    assert hired.status_code == 200
+    assert hired.json()["id"] == other["id"]
+    # One trainer per student: the previous link is gone, not stacked.
+    assert (await api_client.get("/api/v1/coaching/me/trainer", headers=headers)).json()["id"] == (
+        other["id"]
+    )
+
+
+async def test_the_new_trainer_sees_the_student_and_the_old_one_does_not(
+    api_client: AsyncClient,
+) -> None:
+    student = await _auth(api_client, CLIENT_EMAIL)
+    student_id = (await api_client.get("/api/v1/auth/me", headers=student)).json()["id"]
+    trainers = (await api_client.get("/api/v1/coaching/trainers")).json()
+    other = next(trainer for trainer in trainers if trainer["name"] != "Ana López")
+    await api_client.put(
+        "/api/v1/coaching/me/trainer", json={"trainer_id": other["id"]}, headers=student
+    )
+
+    # Ana can no longer read a student who moved on.
+    ana = await _auth(api_client, TRAINER_EMAIL)
+    assert (
+        await api_client.get(f"/api/v1/coaching/students/{student_id}", headers=ana)
+    ).status_code == 404
+    roster = (await api_client.get("/api/v1/coaching/students", headers=ana)).json()
+    assert student_id not in [entry["id"] for entry in roster]
+
+
+async def test_hiring_a_user_who_is_not_a_trainer_is_404(api_client: AsyncClient) -> None:
+    headers = await _auth(api_client, CLIENT_EMAIL)
+    me = (await api_client.get("/api/v1/auth/me", headers=headers)).json()
+
+    response = await api_client.put(
+        "/api/v1/coaching/me/trainer", json={"trainer_id": me["id"]}, headers=headers
+    )
+    assert response.status_code == 404
+
+
+async def test_cancelling_leaves_the_student_without_a_trainer(api_client: AsyncClient) -> None:
+    headers = await _auth(api_client, CLIENT_EMAIL)
+
+    assert (
+        await api_client.delete("/api/v1/coaching/me/trainer", headers=headers)
+    ).status_code == 204
+
+    assert (await api_client.get("/api/v1/coaching/me/trainer", headers=headers)).json() is None

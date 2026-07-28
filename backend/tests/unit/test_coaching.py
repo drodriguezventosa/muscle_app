@@ -7,17 +7,23 @@ import pytest
 
 from app.application.dto.coaching import ProgressUpdate
 from app.application.use_cases.coaching_use_cases import (
+    CancelTrainer,
+    GetMyTrainer,
     GetOwnProgress,
     GetStudentDashboard,
+    HireTrainer,
     ListStudents,
+    ListTrainers,
     StudentNotFoundError,
     SyncProgress,
+    TrainerNotFoundError,
 )
 from app.domain.entities.coaching import (
     BodyMetric,
     LoggedSession,
     Student,
     StudentDetail,
+    Trainer,
     WorkoutLog,
 )
 from app.domain.ports.coaching import CoachingRepository
@@ -52,15 +58,36 @@ def _log(day: date, exercise_id: int = 1, weight: float = 60.0, reps: int = 8) -
     )
 
 
+def _trainer(**overrides: object) -> Trainer:
+    defaults: dict[str, object] = {
+        "id": 9,
+        "name": "Ana López",
+        "specialty": Goal.STRENGTH,
+        "rating": 4.9,
+        "price_per_month": 39,
+        "bio": None,
+        "students": 7,
+    }
+    return Trainer(**{**defaults, **overrides})  # type: ignore[arg-type]
+
+
 class FakeCoachingRepository(CoachingRepository):
     """In-memory double: records what was written, returns what it was given."""
 
-    def __init__(self, detail: StudentDetail | None = None, roster: list[Student] | None = None):
+    def __init__(
+        self,
+        detail: StudentDetail | None = None,
+        roster: list[Student] | None = None,
+        trainers: list[Trainer] | None = None,
+    ):
         self.detail = detail
         self.roster = roster or []
+        self.trainers = trainers if trainers is not None else [_trainer()]
         self.sessions: list[LoggedSession] = []
         self.weights: list[tuple[int, date, float]] = []
         self.profiles: list[dict[str, object]] = []
+        #: student_id -> trainer_id, so the "at most one" rule is observable.
+        self.links: dict[int, int] = {}
 
     async def list_students(self, trainer_id: int) -> list[Student]:
         return self.roster
@@ -70,6 +97,23 @@ class FakeCoachingRepository(CoachingRepository):
 
     async def get_own_detail(self, user_id: int) -> StudentDetail | None:
         return self.detail
+
+    async def list_trainers(self) -> list[Trainer]:
+        return self.trainers
+
+    async def get_trainer_of(self, student_id: int) -> Trainer | None:
+        trainer_id = self.links.get(student_id)
+        return next((t for t in self.trainers if t.id == trainer_id), None)
+
+    async def assign_trainer(self, student_id: int, trainer_id: int) -> Trainer | None:
+        trainer = next((t for t in self.trainers if t.id == trainer_id), None)
+        if trainer is None:
+            return None
+        self.links[student_id] = trainer_id  # replaces any earlier one
+        return trainer
+
+    async def unassign_trainer(self, student_id: int) -> None:
+        self.links.pop(student_id, None)
 
     async def upsert_sessions(self, user_id: int, sessions: Sequence[LoggedSession]) -> int:
         self.sessions.extend(sessions)
@@ -229,3 +273,49 @@ async def test_an_empty_sync_is_a_no_op() -> None:
     repository = FakeCoachingRepository()
     assert await SyncProgress(repository, TODAY).execute(5, ProgressUpdate()) == 0
     assert repository.sessions == []
+
+
+# -- hiring a trainer --------------------------------------------------------
+
+
+async def test_the_trainers_on_offer_come_from_the_repository() -> None:
+    repository = FakeCoachingRepository(trainers=[_trainer(), _trainer(id=10, name="Marco Ruiz")])
+    assert len(await ListTrainers(repository).execute()) == 2
+
+
+async def test_a_student_without_a_trainer_has_none() -> None:
+    assert await GetMyTrainer(FakeCoachingRepository()).execute(student_id=2) is None
+
+
+async def test_hiring_links_the_student_to_that_trainer() -> None:
+    repository = FakeCoachingRepository()
+
+    hired = await HireTrainer(repository).execute(student_id=2, trainer_id=9)
+
+    assert hired.name == "Ana López"
+    assert await GetMyTrainer(repository).execute(2) == hired
+
+
+async def test_hiring_another_trainer_replaces_the_first() -> None:
+    repository = FakeCoachingRepository(trainers=[_trainer(), _trainer(id=10, name="Marco Ruiz")])
+    use_case = HireTrainer(repository)
+
+    await use_case.execute(student_id=2, trainer_id=9)
+    await use_case.execute(student_id=2, trainer_id=10)
+
+    # One trainer per student: the second hire is a change, not a second coach.
+    assert repository.links == {2: 10}
+
+
+async def test_hiring_someone_who_is_not_a_trainer_is_rejected() -> None:
+    with pytest.raises(TrainerNotFoundError):
+        await HireTrainer(FakeCoachingRepository()).execute(student_id=2, trainer_id=404)
+
+
+async def test_cancelling_leaves_the_student_without_a_trainer() -> None:
+    repository = FakeCoachingRepository()
+    await HireTrainer(repository).execute(student_id=2, trainer_id=9)
+
+    await CancelTrainer(repository).execute(student_id=2)
+
+    assert repository.links == {}

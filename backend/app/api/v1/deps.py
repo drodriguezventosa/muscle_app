@@ -13,9 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.use_cases.auth_use_cases import AuthenticateUser, GetAuthenticatedUser
 from app.application.use_cases.coaching_use_cases import (
+    CancelTrainer,
+    GetMyTrainer,
     GetOwnProgress,
     GetStudentDashboard,
+    HireTrainer,
     ListStudents,
+    ListTrainers,
     SyncProgress,
 )
 from app.application.use_cases.exercise_use_cases import GetExercise, SearchExercises
@@ -178,6 +182,22 @@ def provide_get_own_progress(session: SessionDep, locale: LocaleDep) -> GetOwnPr
 
 def provide_sync_progress(session: SessionDep) -> SyncProgress:
     return SyncProgress(SqlAlchemyCoachingRepository(session))
+
+
+def provide_list_trainers(session: SessionDep, locale: LocaleDep) -> ListTrainers:
+    return ListTrainers(SqlAlchemyCoachingRepository(session, locale))
+
+
+def provide_my_trainer(session: SessionDep, locale: LocaleDep) -> GetMyTrainer:
+    return GetMyTrainer(SqlAlchemyCoachingRepository(session, locale))
+
+
+def provide_hire_trainer(session: SessionDep) -> HireTrainer:
+    return HireTrainer(SqlAlchemyCoachingRepository(session))
+
+
+def provide_cancel_trainer(session: SessionDep) -> CancelTrainer:
+    return CancelTrainer(SqlAlchemyCoachingRepository(session))
 
 
 def provide_list_student_plan(session: SessionDep, locale: LocaleDep) -> ListStudentPlan:

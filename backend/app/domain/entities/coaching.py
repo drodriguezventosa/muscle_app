@@ -43,6 +43,20 @@ class WorkoutLog:
 
 
 @dataclass(frozen=True)
+class Trainer:
+    """A trainer as offered to students, with the headline of their service."""
+
+    id: int
+    name: str
+    specialty: Goal
+    rating: float
+    price_per_month: int
+    bio: str | None
+    #: How many students they already follow, so a student can see the load.
+    students: int = 0
+
+
+@dataclass(frozen=True)
 class Student:
     """A person a trainer follows, with the headline numbers for the roster."""
 

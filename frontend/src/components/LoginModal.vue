@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import { useAuthStore } from '@/stores/auth'
+import { useCoachingStore } from '@/stores/coaching'
 import { useProgressStore } from '@/stores/progress'
 
 // There is no public sign-up: only these two seeded accounts exist, and their
@@ -21,6 +22,7 @@ const emit = defineEmits<{ 'update:modelValue': [boolean] }>()
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const coaching = useCoachingStore()
 const progress = useProgressStore()
 const router = useRouter()
 
@@ -54,8 +56,11 @@ async function submit(): Promise<void> {
   // Whatever the browser recorded before signing in belongs to this account now.
   void progress.sync()
   // Land on the area for the role: a trainer manages their students, a student
-  // sees what they have to train today. A blocked route (from the guard) wins.
-  const target = auth.consumeRedirect() ?? (auth.isTrainer ? '/students' : '/plan')
+  // sees what they have to train today — or the trainers page if nobody is
+  // writing their plan yet. A blocked route (from the guard) still wins.
+  await coaching.load(true)
+  const forStudent = coaching.hasTrainer ? '/plan' : '/trainers'
+  const target = auth.consumeRedirect() ?? (auth.isTrainer ? '/students' : forStudent)
   await router.push(target)
 }
 

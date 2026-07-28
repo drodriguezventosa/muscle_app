@@ -1,15 +1,24 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import type { Trainer } from '@/data/coaching'
-import { useSubscriptionsStore } from '@/stores/subscriptions'
+import type { Trainer } from '@/api/coaching'
+import { useCoachingStore } from '@/stores/coaching'
 
 const props = defineProps<{ trainer: Trainer }>()
 const emit = defineEmits<{ close: []; success: [] }>()
 
 const { t, locale } = useI18n()
-const subs = useSubscriptionsStore()
+const coaching = useCoachingStore()
+
+/** Two initials from the name; the API has no reason to send them. */
+const initials = computed(() =>
+  props.trainer.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join(''),
+)
 
 type Step = 'summary' | 'payment' | 'processing' | 'success' | 'declined'
 const step = ref<Step>('summary')
@@ -46,20 +55,34 @@ function useTestCard(): void {
   card.cvc = '123'
 }
 
+/** A fake reference in the shape a gateway would return. Never a real charge. */
+function paymentRef(): string {
+  const random = Math.random().toString(36).slice(2, 6).toUpperCase()
+  return `SIM-${random}-${String(Date.now()).slice(-6)}`
+}
+
 function pay(): void {
   step.value = 'processing'
   // Simulated gateway latency — no network request, no real payment.
-  globalThis.setTimeout(() => {
+  globalThis.setTimeout(async () => {
     if (onlyDigits(card.number) === onlyDigits(DECLINED_CARD)) {
       step.value = 'declined'
       return
     }
-    const sub = subs.subscribe(props.trainer)
-    const next = new Date(sub.startedAt)
+    // The payment is a simulation; the coaching link it creates is real, so it
+    // is the server that records who trains whom.
+    try {
+      await coaching.hire(props.trainer.id)
+    } catch {
+      step.value = 'declined'
+      return
+    }
+    const startedAt = new Date()
+    const next = new Date(startedAt)
     next.setMonth(next.getMonth() + 1)
     receipt.value = {
-      ref: sub.paymentRef,
-      date: formatDate(sub.startedAt),
+      ref: paymentRef(),
+      date: formatDate(startedAt.toISOString()),
       next: formatDate(next.toISOString()),
     }
     step.value = 'success'
@@ -82,7 +105,7 @@ function pay(): void {
         <template v-if="step === 'summary'">
           <h2>{{ t('checkout.title') }}</h2>
           <div class="plan">
-            <span class="avatar" aria-hidden="true">{{ trainer.initials }}</span>
+            <span class="avatar" aria-hidden="true">{{ initials }}</span>
             <div>
               <p class="plan-name">{{ trainer.name }}</p>
               <p class="plan-goal">{{ t(`goal.${trainer.specialty}`) }}</p>

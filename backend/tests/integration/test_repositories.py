@@ -10,15 +10,16 @@ from app.infrastructure.persistence.repositories.muscle_repository import (
     SqlAlchemyMuscleRepository,
 )
 from app.infrastructure.persistence.seed import seed
+from tests.integration.conftest import SEED_WEEKS
 
 
 async def test_seed_is_idempotent(session: AsyncSession) -> None:
-    assert await seed(session) is True
-    assert await seed(session) is False  # second run inserts nothing
+    assert await seed(session, weeks=SEED_WEEKS) is True
+    assert await seed(session, weeks=SEED_WEEKS) is False  # second run inserts nothing
 
 
 async def test_muscle_repository_reads_default_spanish(session: AsyncSession) -> None:
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     repo = SqlAlchemyMuscleRepository(session)  # default locale: es
 
     all_muscles = await repo.list_all()
@@ -33,7 +34,7 @@ async def test_muscle_repository_reads_default_spanish(session: AsyncSession) ->
 
 
 async def test_muscle_repository_resolves_english(session: AsyncSession) -> None:
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     repo = SqlAlchemyMuscleRepository(session, locale="en")
     chest = await repo.get_by_svg_id("chest")
     assert chest is not None
@@ -41,7 +42,7 @@ async def test_muscle_repository_resolves_english(session: AsyncSession) -> None
 
 
 async def test_exercise_repository_lists_for_muscle(session: AsyncSession) -> None:
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     muscles = SqlAlchemyMuscleRepository(session)
     exercises_es = SqlAlchemyExerciseRepository(session)
     exercises_en = SqlAlchemyExerciseRepository(session, locale="en")
@@ -65,7 +66,7 @@ async def test_exercise_repository_lists_for_muscle(session: AsyncSession) -> No
 async def test_exercise_repository_list_catalog_applies_filters(session: AsyncSession) -> None:
     # Non-vector fallback used when the embedding provider is unavailable: it must
     # return real rows (no embedding required) and honour the structured filters.
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     repo = SqlAlchemyExerciseRepository(session)
 
     everything = await repo.list_catalog(limit=5)
@@ -89,7 +90,7 @@ async def test_food_seed_inserts_only_the_missing_foods(session: AsyncSession) -
     from app.infrastructure.persistence.models.food import FoodModel
     from app.infrastructure.persistence.seed import FOODS, _seed_foods
 
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     total = await session.scalar(sa_select(func.count()).select_from(FoodModel))
     assert total == len(FOODS)
 

@@ -27,6 +27,24 @@ class StudentRead(BaseModel):
     last_session_on: date | None
 
 
+class TrainerRead(BaseModel):
+    """A trainer as shown on the cards a student picks from."""
+
+    id: int
+    name: str
+    specialty: Goal
+    rating: float
+    price_per_month: int
+    bio: str | None
+    students: int
+
+
+class HireTrainerRequest(BaseModel):
+    """Which trainer the student takes on. At most one at a time."""
+
+    trainer_id: int = Field(gt=0)
+
+
 class SeriesPointRead(BaseModel):
     """One point of a chart series."""
 

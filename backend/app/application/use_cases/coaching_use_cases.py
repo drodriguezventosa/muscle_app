@@ -15,13 +15,17 @@ from app.application.dto.coaching import (
     StudentDashboard,
     WeeklyAdherence,
 )
-from app.domain.entities.coaching import Student, StudentDetail, WorkoutLog
+from app.domain.entities.coaching import Student, StudentDetail, Trainer, WorkoutLog
 from app.domain.ports.coaching import CoachingRepository
 
 # Exercises plotted per student: enough to show a trend, few enough to read.
 _MAX_TRACKED_EXERCISES = 4
 # Weeks of adherence shown, matching the seeded history.
 _ADHERENCE_WEEKS = 12
+
+
+class TrainerNotFoundError(Exception):
+    """No trainer with that id (or the user is not a trainer)."""
 
 
 class StudentNotFoundError(Exception):
@@ -152,3 +156,54 @@ class SyncProgress:
                 level=update.level,
             )
         return written
+
+
+class ListTrainers:
+    """The trainers a student can choose from."""
+
+    def __init__(self, repository: CoachingRepository) -> None:
+        self._repository = repository
+
+    async def execute(self) -> list[Trainer]:
+        return await self._repository.list_trainers()
+
+
+class GetMyTrainer:
+    """The trainer the signed-in student hired, if any."""
+
+    def __init__(self, repository: CoachingRepository) -> None:
+        self._repository = repository
+
+    async def execute(self, student_id: int) -> Trainer | None:
+        return await self._repository.get_trainer_of(student_id)
+
+
+class HireTrainer:
+    """Take on a trainer, replacing the current one.
+
+    A student has at most one trainer, so this is idempotent by nature: hiring
+    the same one twice changes nothing, hiring another one moves the link.
+    """
+
+    def __init__(self, repository: CoachingRepository) -> None:
+        self._repository = repository
+
+    async def execute(self, student_id: int, trainer_id: int) -> Trainer:
+        trainer = await self._repository.assign_trainer(student_id, trainer_id)
+        if trainer is None:
+            raise TrainerNotFoundError
+        return trainer
+
+
+class CancelTrainer:
+    """Let the student go without a trainer again.
+
+    Their history and their scheduled plan stay: what they trained happened, and
+    a plan they can no longer be given is still a record of what was asked.
+    """
+
+    def __init__(self, repository: CoachingRepository) -> None:
+        self._repository = repository
+
+    async def execute(self, student_id: int) -> None:
+        await self._repository.unassign_trainer(student_id)
