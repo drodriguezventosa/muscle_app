@@ -69,6 +69,8 @@ class LoggedSessionWrite(BaseModel):
     # 0 kg is valid: that is how bodyweight work is logged.
     weight_kg: float = Field(ge=0, le=500)
     reps: int = Field(ge=0, le=100)
+    #: Optional: the free workout logger records the weight, not the set count.
+    sets: int | None = Field(default=None, ge=0, le=20)
     completed: bool = True
 
     @field_validator("logged_on")

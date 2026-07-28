@@ -19,10 +19,10 @@ const loading = ref(true)
 const error = ref(false)
 /** Which item has its report form open, and what is typed in it. */
 const reporting = ref<number | null>(null)
-const draft = reactive<{ weight: number | null; reps: number | null; completed: boolean }>({
+const draft = reactive<{ weight: number | null; reps: number | null; sets: number | null }>({
   weight: null,
   reps: null,
-  completed: true,
+  sets: null,
 })
 const saving = ref(false)
 
@@ -64,9 +64,9 @@ const pending = computed(() => items.value.filter((item) => item.status === 'pen
 function openReport(item: PlanItem): void {
   reporting.value = item.id
   // Pre-filled with the target: hitting it is one tap, adjusting is a nudge.
-  draft.weight = item.doneWeightKg ?? item.targetWeightKg ?? 0
+  draft.weight = item.doneWeightKg || item.targetWeightKg || null
   draft.reps = item.doneReps ?? item.targetReps
-  draft.completed = item.status === 'done' || item.doneWeightKg === null
+  draft.sets = item.doneSets ?? item.targetSets
 }
 
 async function save(item: PlanItem): Promise<void> {
@@ -76,7 +76,7 @@ async function save(item: PlanItem): Promise<void> {
       item.id,
       draft.weight ?? 0,
       draft.reps ?? item.targetReps,
-      draft.completed,
+      draft.sets ?? item.targetSets,
     )
     items.value = items.value.map((entry) => (entry.id === updated.id ? updated : entry))
     reporting.value = null
@@ -88,8 +88,19 @@ async function save(item: PlanItem): Promise<void> {
 }
 
 function targetLabel(item: PlanItem): string {
+  // No target load means bodyweight work: "0 kg" would read as nonsense.
   const load = item.targetWeightKg ? `${item.targetWeightKg} kg` : t('plan.openLoad')
   return `${item.targetSets} × ${item.targetReps} · ${load}`
+}
+
+/** What the student reported, phrased so bodyweight work never says "0 kg". */
+function doneLabel(item: PlanItem): string {
+  const done = {
+    sets: item.doneSets ?? item.targetSets,
+    reps: item.doneReps,
+    kg: item.doneWeightKg,
+  }
+  return item.doneWeightKg ? t('plan.lifted', done) : t('plan.liftedBodyweight', done)
 }
 </script>
 
@@ -128,7 +139,8 @@ function targetLabel(item: PlanItem): string {
                 <p class="target">
                   {{ targetLabel(item) }}
                   <span v-if="item.doneWeightKg !== null" class="lifted">
-                    · {{ t('plan.lifted', { kg: item.doneWeightKg, reps: item.doneReps }) }}
+                    ·
+                    {{ doneLabel(item) }}
                   </span>
                 </p>
                 <p v-if="item.notes" class="notes">“{{ item.notes }}”</p>
@@ -145,7 +157,9 @@ function targetLabel(item: PlanItem): string {
             </div>
 
             <form v-if="reporting === item.id" class="report" @submit.prevent="save(item)">
-              <label class="field">
+              <!-- Bodyweight work has no load to report, so the field is not
+                   shown at all rather than asking for a zero. -->
+              <label v-if="item.targetWeightKg !== null" class="field">
                 <span class="field-label">{{ t('plan.weightLifted') }}</span>
                 <input v-model.number="draft.weight" type="number" min="0" step="0.5" />
               </label>
@@ -153,10 +167,9 @@ function targetLabel(item: PlanItem): string {
                 <span class="field-label">{{ t('plan.repsDone') }}</span>
                 <input v-model.number="draft.reps" type="number" min="0" max="100" />
               </label>
-              <label class="check">
-                <input v-model="draft.completed" type="checkbox" />
-                <span class="box" aria-hidden="true"></span>
-                {{ t('plan.allSets', { n: item.targetSets, reps: item.targetReps }) }}
+              <label class="field">
+                <span class="field-label">{{ t('plan.setsDone') }}</span>
+                <input v-model.number="draft.sets" type="number" min="0" max="20" />
               </label>
               <div class="actions">
                 <button type="submit" class="primary" :disabled="saving">

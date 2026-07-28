@@ -42,6 +42,7 @@ class PlanItem:
     #: What the student actually logged that day, if anything.
     done_weight_kg: float | None = None
     done_reps: int | None = None
+    done_sets: int | None = None
     done_completed: bool | None = None
 
     @property
@@ -62,4 +63,6 @@ class PlanItem:
             and self.done_weight_kg + 0.01 < self.target_weight_kg
         )
         short_on_reps = self.done_reps is not None and self.done_reps < self.target_reps
-        return PlanItemStatus.PARTIAL if short_on_weight or short_on_reps else PlanItemStatus.DONE
+        short_on_sets = self.done_sets is not None and self.done_sets < self.target_sets
+        short = short_on_weight or short_on_reps or short_on_sets
+        return PlanItemStatus.PARTIAL if short else PlanItemStatus.DONE

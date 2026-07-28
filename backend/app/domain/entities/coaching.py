@@ -83,3 +83,6 @@ class LoggedSession:
     weight_kg: float
     reps: int
     completed: bool
+    #: Sets actually performed. None when the logger did not ask for them (the
+    #: free workout page tracks the weight only).
+    sets: int | None = None

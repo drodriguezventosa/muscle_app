@@ -113,7 +113,7 @@ async function add(): Promise<void> {
       scheduledOn: selectedDay.value,
       targetSets: draft.sets,
       targetReps: draft.reps,
-      targetWeightKg: draft.weight,
+      targetWeightKg: draft.weight || null,
     })
     // Re-scheduling the same exercise that day edits it, so replace by id.
     items.value = [...items.value.filter((entry) => entry.id !== item.id), item]
@@ -137,8 +137,19 @@ async function remove(item: PlanItem): Promise<void> {
 }
 
 function targetLabel(item: PlanItem): string {
+  // No target load means bodyweight work: "0 kg" would read as nonsense.
   const load = item.targetWeightKg ? `${item.targetWeightKg} kg` : t('plan.openLoad')
   return `${item.targetSets} × ${item.targetReps} · ${load}`
+}
+
+/** What the student reported, phrased so bodyweight work never says "0 kg". */
+function doneLabel(item: PlanItem): string {
+  const done = {
+    sets: item.doneSets ?? item.targetSets,
+    reps: item.doneReps,
+    kg: item.doneWeightKg,
+  }
+  return item.doneWeightKg ? t('plan.lifted', done) : t('plan.liftedBodyweight', done)
 }
 </script>
 
@@ -159,7 +170,8 @@ function targetLabel(item: PlanItem): string {
             <p class="target">
               {{ targetLabel(item) }}
               <span v-if="item.doneWeightKg !== null" class="lifted">
-                · {{ t('plan.lifted', { kg: item.doneWeightKg, reps: item.doneReps }) }}
+                ·
+                {{ doneLabel(item) }}
               </span>
             </p>
           </div>
@@ -199,7 +211,13 @@ function targetLabel(item: PlanItem): string {
           </label>
           <label class="field">
             <span class="field-label">{{ t('plan.kg') }}</span>
-            <input v-model.number="draft.weight" type="number" min="0" step="0.5" />
+            <input
+              v-model.number="draft.weight"
+              type="number"
+              min="0"
+              step="0.5"
+              :placeholder="t('plan.kgPlaceholder')"
+            />
           </label>
         </div>
         <ul v-if="results.length" class="results">

@@ -39,6 +39,7 @@ function item(overrides: Record<string, unknown> = {}) {
     notes: null,
     doneWeightKg: null,
     doneReps: null,
+    doneSets: null,
     status: 'pending' as const,
     ...overrides,
   }
@@ -129,21 +130,24 @@ describe('PlanView', () => {
 
   it('reports what was lifted and shows the status that came back', async () => {
     myPlan.mockResolvedValue([item()])
-    reportPlanItem.mockResolvedValue(item({ status: 'partial', doneWeightKg: 92.5, doneReps: 6 }))
+    reportPlanItem.mockResolvedValue(
+      item({ status: 'partial', doneWeightKg: 92.5, doneReps: 6, doneSets: 2 }),
+    )
 
     const wrapper = mount(PlanView, { global })
     await flushPromises()
     await wrapper.findAll('.strip .day')[2].trigger('click')
 
     await wrapper.find('.report-btn').trigger('click')
-    const [weight, reps] = wrapper.findAll('.report input[type="number"]')
+    const [weight, reps, sets] = wrapper.findAll('.report input[type="number"]')
     await weight.setValue(92.5)
     await reps.setValue(6)
+    await sets.setValue(2)
     await wrapper.find('form.report').trigger('submit')
     await flushPromises()
 
-    // Both numbers travel: falling short can be less weight, fewer reps, or both.
-    expect(reportPlanItem).toHaveBeenCalledWith(1, 92.5, 6, true)
+    // All three travel: falling short can be the load, the reps or the sets.
+    expect(reportPlanItem).toHaveBeenCalledWith(1, 92.5, 6, 2)
     expect(wrapper.find('.badge').classes()).toContain('partial')
     expect(wrapper.text()).toContain('92.5')
   })

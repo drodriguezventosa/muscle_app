@@ -117,6 +117,11 @@ def test_falling_short_of_the_target_reps_is_partial() -> None:
     assert item.status(TODAY) is PlanItemStatus.PARTIAL
 
 
+def test_falling_short_of_the_target_sets_is_partial() -> None:
+    item = _item(done_weight_kg=100.0, done_reps=8, done_sets=2, done_completed=True)
+    assert item.status(TODAY) is PlanItemStatus.PARTIAL
+
+
 def test_not_finishing_the_sets_is_partial() -> None:
     item = _item(done_weight_kg=100.0, done_reps=8, done_completed=False)
     assert item.status(TODAY) is PlanItemStatus.PARTIAL
@@ -225,13 +230,28 @@ async def test_reporting_writes_an_ordinary_workout_log() -> None:
     coaching = RecordingCoaching()
 
     await ReportPlanItem(plans, coaching).execute(
-        student_id=2, item_id=1, weight_kg=92.5, reps=8, completed=True
+        student_id=2, item_id=1, weight_kg=92.5, reps=8, sets=3
     )
 
     # One log, on the scheduled day and exercise: the charts need nothing extra.
     assert len(coaching.written) == 1
     written = coaching.written[0]
     assert (written.exercise_id, written.logged_on, written.weight_kg) == (5, TODAY, 92.5)
+    assert (written.reps, written.sets) == (8, 3)
+    # Three of three sets at the target reps: the server calls that complete.
+    assert written.completed is True
+
+
+async def test_stopping_short_of_the_sets_is_not_completed() -> None:
+    plans = FakePlanRepository([_item()])
+    coaching = RecordingCoaching()
+
+    await ReportPlanItem(plans, coaching).execute(
+        student_id=2, item_id=1, weight_kg=100, reps=8, sets=1
+    )
+
+    # The flag is derived from the numbers, never taken from the client.
+    assert coaching.written[0].completed is False
 
 
 async def test_a_student_cannot_report_another_students_item() -> None:
@@ -240,6 +260,6 @@ async def test_a_student_cannot_report_another_students_item() -> None:
 
     with pytest.raises(PlanItemNotFoundError):
         await ReportPlanItem(plans, coaching).execute(
-            student_id=2, item_id=1, weight_kg=90, reps=8, completed=True
+            student_id=2, item_id=1, weight_kg=90, reps=8, sets=3
         )
     assert coaching.written == []

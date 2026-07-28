@@ -16,6 +16,7 @@ export interface PlanItem {
   notes: string | null
   doneWeightKg: number | null
   doneReps: number | null
+  doneSets: number | null
   status: PlanItemStatus
 }
 
@@ -39,6 +40,7 @@ interface PlanItemPayload {
   notes: string | null
   done_weight_kg: number | null
   done_reps: number | null
+  done_sets: number | null
   status: PlanItemStatus
 }
 
@@ -54,6 +56,7 @@ function toItem(payload: PlanItemPayload): PlanItem {
     notes: payload.notes,
     doneWeightKg: payload.done_weight_kg,
     doneReps: payload.done_reps,
+    doneSets: payload.done_sets,
     status: payload.status,
   }
 }
@@ -103,16 +106,21 @@ export function unscheduleExercise(itemId: number): Promise<void> {
   return api.remove(`/coaching/plan/${itemId}`)
 }
 
-/** Report what was lifted; returns the item with its status recomputed. */
+/**
+ * Report what was done; returns the item with its status recomputed.
+ *
+ * The three numbers are the whole report — whether the plan was met is worked
+ * out on the server from them and the targets.
+ */
 export async function reportPlanItem(
   itemId: number,
   weightKg: number,
   reps: number,
-  completed: boolean,
+  sets: number,
 ): Promise<PlanItem> {
   const payload = await api.post<PlanItemPayload>(
     `/coaching/me/plan/${itemId}/report?lang=${i18n.global.locale.value}`,
-    { weight_kg: weightKg, reps, completed },
+    { weight_kg: weightKg, reps, sets },
   )
   return toItem(payload)
 }

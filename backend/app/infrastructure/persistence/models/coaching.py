@@ -67,6 +67,8 @@ class WorkoutLogModel(Base):
     # 0 for bodyweight work, which is why this is not constrained to be positive.
     weight_kg: Mapped[float] = mapped_column(Float, default=0.0)
     reps: Mapped[int] = mapped_column(default=0)
+    # Nullable: the free workout logger records the weight, not the set count.
+    sets: Mapped[int | None] = mapped_column(nullable=True)
     completed: Mapped[bool] = mapped_column(default=True)
 
 

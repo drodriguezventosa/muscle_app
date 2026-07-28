@@ -131,17 +131,26 @@ async def test_the_student_reports_what_they_lifted(
     # Short of the target: the plan says so instead of calling it done.
     partial = await api_client.post(
         f"/api/v1/coaching/me/plan/{item_id}/report",
-        json={"weight_kg": 92.5, "reps": 8, "completed": True},
+        json={"weight_kg": 92.5, "reps": 8, "sets": 3},
         headers=student,
     )
     assert partial.status_code == 200
     assert partial.json()["status"] == "partial"
     assert partial.json()["done_weight_kg"] == 92.5
+    assert partial.json()["done_sets"] == 3
+
+    # One set short of the plan is partial too, even at the full load.
+    short_sets = await api_client.post(
+        f"/api/v1/coaching/me/plan/{item_id}/report",
+        json={"weight_kg": 100, "reps": 8, "sets": 2},
+        headers=student,
+    )
+    assert short_sets.json()["status"] == "partial"
 
     # Reporting again with the full load closes it.
     done = await api_client.post(
         f"/api/v1/coaching/me/plan/{item_id}/report",
-        json={"weight_kg": 100, "reps": 8, "completed": True},
+        json={"weight_kg": 100, "reps": 8, "sets": 3},
         headers=student,
     )
     assert done.json()["status"] == "done"

@@ -140,7 +140,8 @@ class ReportPlanItem:
     Writes a normal workout log, so the trainer's charts and the student's own
     progress see it without any extra bookkeeping. Reporting less than the
     target is expected, not an error: the status turns "partial" and the
-    trainer can see where the plan was too ambitious.
+    trainer can see where the plan was too ambitious — whether the student fell
+    short on the load, the repetitions or the number of sets.
     """
 
     def __init__(self, plans: TrainingPlanRepository, coaching: CoachingRepository) -> None:
@@ -154,11 +155,14 @@ class ReportPlanItem:
         item_id: int,
         weight_kg: float,
         reps: int,
-        completed: bool,
+        sets: int,
     ) -> PlanItem:
         item = await self._plans.get(item_id)
         if item is None or item.student_id != student_id:
             raise PlanItemNotFoundError
+        # Whether the plan was met is arithmetic on the three numbers, so the
+        # server works it out rather than trusting a flag from the client.
+        completed = sets >= item.target_sets and reps >= item.target_reps
         await self._coaching.upsert_sessions(
             student_id,
             [
@@ -167,6 +171,7 @@ class ReportPlanItem:
                     logged_on=item.scheduled_on,
                     weight_kg=weight_kg,
                     reps=reps,
+                    sets=sets,
                     completed=completed,
                 )
             ],

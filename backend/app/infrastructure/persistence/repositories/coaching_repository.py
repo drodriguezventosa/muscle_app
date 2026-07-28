@@ -98,6 +98,7 @@ class SqlAlchemyCoachingRepository(CoachingRepository):
                 "logged_on": s.logged_on,
                 "weight_kg": s.weight_kg,
                 "reps": s.reps,
+                "sets": s.sets,
                 "completed": s.completed,
             }
             for s in deduped.values()
@@ -112,6 +113,7 @@ class SqlAlchemyCoachingRepository(CoachingRepository):
                 set_={
                     "weight_kg": statement.excluded.weight_kg,
                     "reps": statement.excluded.reps,
+                    "sets": statement.excluded.sets,
                     "completed": statement.excluded.completed,
                 },
             )

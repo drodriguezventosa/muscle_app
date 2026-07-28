@@ -170,6 +170,7 @@ async def sync_progress(
                     logged_on=session.logged_on,
                     weight_kg=session.weight_kg,
                     reps=session.reps,
+                    sets=session.sets,
                     completed=session.completed,
                 )
                 for session in payload.sessions
@@ -197,6 +198,7 @@ def _to_plan_read(scheduled: ScheduledExercise) -> PlanItemRead:
         notes=item.notes,
         done_weight_kg=item.done_weight_kg,
         done_reps=item.done_reps,
+        done_sets=item.done_sets,
         status=scheduled.status,
     )
 
@@ -320,7 +322,7 @@ async def report_plan_item(
             item_id=item_id,
             weight_kg=payload.weight_kg,
             reps=payload.reps,
-            completed=payload.completed,
+            sets=payload.sets,
         )
     except PlanItemNotFoundError as exc:
         raise HTTPException(

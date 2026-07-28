@@ -23,6 +23,7 @@ class PlanItemRead(BaseModel):
     notes: str | None
     done_weight_kg: float | None
     done_reps: int | None
+    done_sets: int | None
     status: PlanItemStatus
 
 
@@ -49,12 +50,12 @@ class ScheduleExerciseRequest(BaseModel):
 
 
 class ReportPlanItemRequest(BaseModel):
-    """What the student actually lifted.
+    """What the student actually did: the load, the reps and the sets.
 
-    `completed` says whether they finished every set at the target reps; the
-    weight is what they managed, which may be under the target.
+    Any of the three may be under the target — that is the point. Whether the
+    plan was met is derived from them server-side.
     """
 
     weight_kg: float = Field(ge=0, le=500)
     reps: int = Field(ge=0, le=100)
-    completed: bool = True
+    sets: int = Field(ge=0, le=20)

@@ -54,6 +54,7 @@ class SqlAlchemyTrainingPlanRepository(TrainingPlanRepository):
             notes=item.notes,
             done_weight_kg=log.weight_kg if log else None,
             done_reps=log.reps if log else None,
+            done_sets=log.sets if log else None,
             done_completed=log.completed if log else None,
         )
 
