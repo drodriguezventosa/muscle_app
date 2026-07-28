@@ -117,7 +117,7 @@ onBeforeUnmount(stop)
 </script>
 
 <template>
-  <div class="capture">
+  <div class="capture" data-tour="meal-photo">
     <button type="button" class="cap-btn primary" :disabled="props.busy" @click="start">
       <span v-if="busyOn('camera')" class="cap-spinner" aria-hidden="true"></span>
       <span v-else aria-hidden="true">📷</span>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
@@ -10,6 +10,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCoachingStore } from '@/stores/coaching'
+import { buildTourSteps } from '@/tour/steps'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -25,52 +26,15 @@ const menuOpen = ref(false)
 // works from any route.
 const TOUR_KEY = 'muscleapp:tour-seen'
 const showTour = ref(false)
-// The tour walks through every section: each step navigates to its route and
-// spotlights the section content, then covers the assistant and the controls.
-const tourSteps: TourStep[] = [
-  { route: '/', titleKey: 'tour.steps.welcome.title', bodyKey: 'tour.steps.welcome.body' },
-  {
-    route: '/',
-    target: '[data-tour="main"]',
-    titleKey: 'tour.steps.explore.title',
-    bodyKey: 'tour.steps.explore.body',
-  },
-  {
-    route: '/workouts',
-    target: '[data-tour="main"]',
-    titleKey: 'tour.steps.workouts.title',
-    bodyKey: 'tour.steps.workouts.body',
-  },
-  {
-    route: '/nutrition',
-    target: '[data-tour="main"]',
-    titleKey: 'tour.steps.nutrition.title',
-    bodyKey: 'tour.steps.nutrition.body',
-  },
-  {
-    route: '/progress',
-    target: '[data-tour="main"]',
-    titleKey: 'tour.steps.progress.title',
-    bodyKey: 'tour.steps.progress.body',
-  },
-  {
-    route: '/trainers',
-    target: '[data-tour="main"]',
-    titleKey: 'tour.steps.trainers.title',
-    bodyKey: 'tour.steps.trainers.body',
-  },
-  {
-    target: '[data-testid="chat-toggle"]',
-    titleKey: 'tour.steps.assistant.title',
-    bodyKey: 'tour.steps.assistant.body',
-  },
-  {
-    target: '[data-tour="theme"]',
-    titleKey: 'tour.steps.controls.title',
-    bodyKey: 'tour.steps.controls.body',
-  },
-  { titleKey: 'tour.steps.done.title', bodyKey: 'tour.steps.done.body' },
-]
+// The tour walks through every section, and which steps exist depends on who is
+// looking: see `buildTourSteps`.
+const tourSteps = computed<TourStep[]>(() =>
+  buildTourSteps({
+    isSignedIn: auth.isSignedIn,
+    isTrainer: auth.isTrainer,
+    hasTrainer: coaching.hasTrainer,
+  }),
+)
 
 // Persist the "seen" flag only if the user opted out of seeing it again;
 // otherwise the tour reappears on the next visit.

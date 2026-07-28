@@ -19,7 +19,7 @@ from app.domain.entities.coaching import LoggedSession, Student, StudentDetail
 from app.domain.entities.plan import PlanItem, PlanItemStatus
 from app.domain.ports.plan import TrainingPlanRepository
 from app.domain.value_objects.enums import Difficulty, Goal
-from tests.unit.test_coaching import FakeCoachingRepository
+from tests.unit.test_coaching import FakeCoachingRepository, _trainer
 
 TODAY = date(2026, 7, 27)
 
@@ -61,11 +61,15 @@ class FakePlanRepository(TrainingPlanRepository):
         self.catalog = catalog
         self.removed: list[int] = []
 
-    async def list_for_student(self, student_id: int, start: date, end: date) -> list[PlanItem]:
+    async def list_for_student(
+        self, student_id: int, trainer_id: int, start: date, end: date
+    ) -> list[PlanItem]:
         return [
             item
             for item in self.items
-            if item.student_id == student_id and start <= item.scheduled_on <= end
+            if item.student_id == student_id
+            and item.trainer_id == trainer_id
+            and start <= item.scheduled_on <= end
         ]
 
     async def get(self, item_id: int) -> PlanItem | None:
@@ -153,15 +157,55 @@ async def test_the_calendar_comes_back_with_the_status_resolved() -> None:
     ]
 
 
-async def test_a_student_reads_their_own_calendar_without_a_roster_check() -> None:
+def _hired(trainer_id: int = 9, student_id: int = 2) -> FakeCoachingRepository:
+    """A coaching repository where the student has hired that trainer."""
+    coaching = FakeCoachingRepository(
+        detail=_detail(), trainers=[_trainer(), _trainer(id=11, name="Marco Ruiz")]
+    )
+    coaching.links[student_id] = trainer_id
+    return coaching
+
+
+async def test_a_student_reads_the_plan_their_trainer_is_writing() -> None:
     plans = FakePlanRepository([_item()])
-    entries = await ListOwnPlan(plans, TODAY).execute(2, TODAY, TODAY)
+    entries = await ListOwnPlan(plans, _hired(), TODAY).execute(2, TODAY, TODAY)
     assert len(entries) == 1
+
+
+async def test_changing_trainer_changes_the_plan_the_student_sees() -> None:
+    """Each trainer keeps their own calendar, so the plan follows the hire.
+
+    The previous trainer's prescriptions are not deleted: they stay with that
+    trainer and come back if the student hires them again.
+    """
+    plans = FakePlanRepository([_item()])  # written by trainer 9
+    coaching = _hired(trainer_id=11)  # ...but Marco is the trainer now
+
+    entries = await ListOwnPlan(plans, coaching, TODAY).execute(2, TODAY, TODAY)
+    assert entries == []
+
+    await coaching.assign_trainer(2, 9)  # back to Ana
+    again = await ListOwnPlan(plans, coaching, TODAY).execute(2, TODAY, TODAY)
+    assert len(again) == 1
+
+
+async def test_a_student_without_a_trainer_has_no_plan() -> None:
+    plans = FakePlanRepository([_item()])
+    coaching = FakeCoachingRepository(detail=_detail())  # no link at all
+    assert await ListOwnPlan(plans, coaching, TODAY).execute(2, TODAY, TODAY) == []
+
+
+async def test_a_trainer_only_sees_the_calendar_they_wrote() -> None:
+    plans = FakePlanRepository([_item(), _item(id=2, trainer_id=11)])
+    entries = await ListStudentPlan(plans, _hired(), TODAY).execute(9, 2, TODAY, TODAY)
+    assert [entry.item.id for entry in entries] == [1]
 
 
 async def test_an_over_long_window_is_clamped_not_rejected() -> None:
     plans = FakePlanRepository([_item(id=7, scheduled_on=TODAY + timedelta(days=200))])
-    entries = await ListOwnPlan(plans, TODAY).execute(2, TODAY, TODAY + timedelta(days=365))
+    entries = await ListOwnPlan(plans, _hired(), TODAY).execute(
+        2, TODAY, TODAY + timedelta(days=365)
+    )
     # The far-future item falls outside the clamped window.
     assert entries == []
 
@@ -210,14 +254,25 @@ async def test_removing_someone_elses_item_is_reported_as_missing() -> None:
     assert plans.removed == []
 
 
+async def test_a_trainer_cannot_remove_what_another_trainer_prescribed() -> None:
+    # Same student, on both rosters at some point: the calendars stay separate.
+    plans = FakePlanRepository([_item(trainer_id=11)])
+    use_case = UnscheduleExercise(plans, _hired())
+
+    with pytest.raises(PlanItemNotFoundError):
+        await use_case.execute(trainer_id=9, item_id=1)
+    assert plans.removed == []
+
+
 # -- reporting ---------------------------------------------------------------
 
 
 class RecordingCoaching(FakeCoachingRepository):
     """Captures the sessions written when a student reports a scheduled lift."""
 
-    def __init__(self) -> None:
-        super().__init__(detail=_detail())
+    def __init__(self, trainer_id: int = 9) -> None:
+        super().__init__(detail=_detail(), trainers=[_trainer(), _trainer(id=11)])
+        self.links[2] = trainer_id
         self.written: list[LoggedSession] = []
 
     async def upsert_sessions(self, user_id: int, sessions: Sequence[LoggedSession]) -> int:
@@ -252,6 +307,18 @@ async def test_stopping_short_of_the_sets_is_not_completed() -> None:
 
     # The flag is derived from the numbers, never taken from the client.
     assert coaching.written[0].completed is False
+
+
+async def test_a_previous_trainers_prescription_can_no_longer_be_reported() -> None:
+    # It is not on the calendar they can see, so it is not theirs to report on.
+    plans = FakePlanRepository([_item()])  # prescribed by trainer 9
+    coaching = RecordingCoaching(trainer_id=11)  # they hired Marco since
+
+    with pytest.raises(PlanItemNotFoundError):
+        await ReportPlanItem(plans, coaching).execute(
+            student_id=2, item_id=1, weight_kg=90, reps=8, sets=3
+        )
+    assert coaching.written == []
 
 
 async def test_a_student_cannot_report_another_students_item() -> None:

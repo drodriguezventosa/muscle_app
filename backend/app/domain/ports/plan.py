@@ -10,8 +10,15 @@ class TrainingPlanRepository(ABC):
     """Stores what a trainer scheduled, joined with what the student logged."""
 
     @abstractmethod
-    async def list_for_student(self, student_id: int, start: date, end: date) -> list[PlanItem]:
-        """Return the student's scheduled exercises between two days, inclusive."""
+    async def list_for_student(
+        self, student_id: int, trainer_id: int, start: date, end: date
+    ) -> list[PlanItem]:
+        """Return what this trainer scheduled for this student, both days included.
+
+        Keyed by the pair and not by the student alone: each trainer keeps their
+        own calendar, so a student who changes trainer sees the new one's plan
+        and the previous one's stays with them.
+        """
 
     @abstractmethod
     async def get(self, item_id: int) -> PlanItem | None:
