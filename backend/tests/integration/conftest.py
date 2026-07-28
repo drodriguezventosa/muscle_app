@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.config import Settings
+from app.core.rate_limit import limiter
 from app.infrastructure.ai.embeddings import FakeEmbedding
 from app.infrastructure.persistence.database import get_session
 from app.infrastructure.persistence.embeddings_backfill import backfill_embeddings
@@ -27,6 +28,17 @@ from app.infrastructure.persistence.seed import seed
 from app.main import create_app
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter() -> None:
+    """Start every test with a fresh limiter.
+
+    The limiter is a module-level singleton keyed by client address, and every
+    test shares the same one, so without this a test that signs in would spend
+    the login budget of the tests that run after it.
+    """
+    limiter.reset()
 
 
 @pytest_asyncio.fixture

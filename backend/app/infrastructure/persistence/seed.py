@@ -6,6 +6,10 @@ the AI phase. `name`/`description`/`video_url` hold Spanish; `*_en` hold English
 """
 
 import asyncio
+import random
+import secrets
+from dataclasses import dataclass
+from datetime import date, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,11 +18,18 @@ from app.core.config import get_settings
 from app.domain.value_objects.enums import (
     Difficulty,
     Equipment,
+    Goal,
     MuscleGroup,
     MuscleRole,
     UserRole,
 )
 from app.infrastructure.persistence.database import get_session_factory
+from app.infrastructure.persistence.models.coaching import (
+    BodyMetricModel,
+    StudentProfileModel,
+    TrainerStudentModel,
+    WorkoutLogModel,
+)
 from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
 from app.infrastructure.persistence.models.food import FoodModel
 from app.infrastructure.persistence.models.muscle import MuscleModel
@@ -1299,22 +1310,299 @@ DEMO_USERS: list[tuple[str, str, UserRole]] = [
 
 
 async def _seed_users(session: AsyncSession, password: str) -> int:
-    """Insert the demo accounts that are missing, keyed by email.
+    """Insert the missing demo accounts and roster students, keyed by email.
 
     Hashing is deliberate work (Argon2), so it only happens when there is
     actually an account to create — not on every boot.
     """
     known = set((await session.scalars(select(UserModel.email))).all())
+    advertised = {email for _, email, _ in DEMO_USERS}
     missing = [u for u in DEMO_USERS if u[1] not in known]
-    if not missing:
+    # The rest of the roster exists only as data for the trainer's dashboard.
+    # They are given a random password nobody holds, so the two advertised
+    # accounts remain the only way into the app.
+    roster = [
+        (student.name, student.email, UserRole.CLIENT)
+        for student in DEMO_STUDENTS
+        if student.email not in known and student.email not in advertised
+    ]
+    if not missing and not roster:
         return 0
-    password_hash = Argon2Hasher().hash(password)
+    hasher = Argon2Hasher()
+    demo_hash = hasher.hash(password)
     session.add_all(
-        UserModel(name=name, email=email, role=role, password_hash=password_hash)
+        UserModel(name=name, email=email, role=role, password_hash=demo_hash)
         for name, email, role in missing
     )
+    session.add_all(
+        UserModel(
+            name=name,
+            email=email,
+            role=role,
+            password_hash=hasher.hash(secrets.token_urlsafe(32)),
+        )
+        for name, email, role in roster
+    )
     await session.commit()
-    return len(missing)
+    return len(missing) + len(roster)
+
+
+@dataclass(frozen=True)
+class _StudentSeed:
+    """A demo student and the shape of the history generated for them.
+
+    `lifts` are (English exercise name, starting kg, target reps, weekly gain),
+    which is what turns into the strength curves of the trainer's dashboard.
+    """
+
+    name: str
+    email: str
+    age: int
+    height_cm: int
+    goal: Goal
+    level: Difficulty
+    start_weight_kg: float
+    weekly_weight_delta: float  # body weight drift per week, signed
+    adherence: float  # probability of showing up on a scheduled day
+    lifts: tuple[tuple[str, float, int, float], ...]
+
+
+# The first entry is the demo student anyone can sign in as; the rest exist only
+# to give the trainer a roster worth charting.
+DEMO_STUDENTS: list[_StudentSeed] = [
+    _StudentSeed(
+        name="Javier M.",
+        email="alumno@demo.muscleapp",
+        age=29,
+        height_cm=178,
+        goal=Goal.HYPERTROPHY,
+        level=Difficulty.INTERMEDIATE,
+        start_weight_kg=78.0,
+        weekly_weight_delta=0.15,
+        adherence=0.88,
+        lifts=(
+            ("Barbell bench press", 60.0, 8, 1.25),
+            ("Barbell back squat", 80.0, 8, 1.75),
+            ("Barbell curl", 25.0, 10, 0.4),
+        ),
+    ),
+    _StudentSeed(
+        name="Lucía P.",
+        email="lucia@demo.muscleapp",
+        age=34,
+        height_cm=165,
+        goal=Goal.FAT_LOSS,
+        level=Difficulty.BEGINNER,
+        start_weight_kg=72.0,
+        weekly_weight_delta=-0.45,
+        adherence=0.75,
+        lifts=(
+            ("Goblet squat", 12.0, 12, 0.6),
+            ("Lat pulldown", 25.0, 12, 0.9),
+            ("Plank", 0.0, 1, 0.0),
+        ),
+    ),
+    _StudentSeed(
+        name="Diego R.",
+        email="diego@demo.muscleapp",
+        age=41,
+        height_cm=182,
+        goal=Goal.STRENGTH,
+        level=Difficulty.ADVANCED,
+        start_weight_kg=88.0,
+        weekly_weight_delta=0.05,
+        adherence=0.94,
+        lifts=(
+            ("Barbell back squat", 120.0, 5, 2.0),
+            ("Romanian deadlift", 100.0, 5, 2.0),
+            ("Overhead press", 45.0, 5, 0.75),
+        ),
+    ),
+    _StudentSeed(
+        name="Marta S.",
+        email="marta@demo.muscleapp",
+        age=25,
+        height_cm=170,
+        goal=Goal.HYPERTROPHY,
+        level=Difficulty.BEGINNER,
+        start_weight_kg=61.0,
+        weekly_weight_delta=0.2,
+        adherence=0.8,
+        lifts=(
+            ("Leg press", 60.0, 12, 2.5),
+            ("Lat pulldown", 30.0, 10, 1.0),
+            ("Barbell curl", 15.0, 12, 0.3),
+        ),
+    ),
+    _StudentSeed(
+        name="Carlos V.",
+        email="carlos@demo.muscleapp",
+        age=37,
+        height_cm=175,
+        goal=Goal.STRENGTH,
+        level=Difficulty.INTERMEDIATE,
+        start_weight_kg=83.0,
+        weekly_weight_delta=-0.1,
+        adherence=0.62,  # the roster needs someone the trainer should chase
+        lifts=(
+            ("Barbell bench press", 70.0, 5, 1.25),
+            ("Barbell back squat", 95.0, 5, 1.75),
+            ("Pull-up", 0.0, 6, 0.0),
+        ),
+    ),
+    _StudentSeed(
+        name="Nerea B.",
+        email="nerea@demo.muscleapp",
+        age=30,
+        height_cm=168,
+        goal=Goal.FAT_LOSS,
+        level=Difficulty.INTERMEDIATE,
+        start_weight_kg=69.0,
+        weekly_weight_delta=-0.35,
+        adherence=0.9,
+        lifts=(
+            ("Goblet squat", 16.0, 12, 0.8),
+            ("Romanian deadlift", 40.0, 10, 1.25),
+            ("Plank", 0.0, 1, 0.0),
+        ),
+    ),
+    _StudentSeed(
+        name="Iván T.",
+        email="ivan@demo.muscleapp",
+        age=22,
+        height_cm=186,
+        goal=Goal.HYPERTROPHY,
+        level=Difficulty.ADVANCED,
+        start_weight_kg=80.0,
+        weekly_weight_delta=0.25,
+        adherence=0.85,
+        lifts=(
+            ("Barbell bench press", 80.0, 8, 1.5),
+            ("Overhead press", 50.0, 8, 0.75),
+            ("Pull-up", 0.0, 10, 0.0),
+        ),
+    ),
+]
+
+# Twelve weeks of history: long enough for a trend, short enough to seed fast.
+HISTORY_WEEKS = 12
+# Monday, Wednesday and Friday.
+_TRAINING_WEEKDAYS = (0, 2, 4)
+
+
+def _plate_rounded(weight: float) -> float:
+    """Round to the nearest 2.5 kg, the smallest plate pair in a normal gym."""
+    return round(weight / 2.5) * 2.5
+
+
+def _generate_history(
+    student: _StudentSeed,
+    exercise_ids: dict[str, int],
+    today: date,
+    rng: random.Random,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """Build (workout logs, body metrics) for one student over `HISTORY_WEEKS`.
+
+    Deterministic given the same seed, so re-seeding a database produces the
+    same story instead of a different one every time.
+    """
+    logs: list[dict[str, object]] = []
+    metrics: list[dict[str, object]] = []
+    first_monday = today - timedelta(days=today.weekday(), weeks=HISTORY_WEEKS - 1)
+
+    for week in range(HISTORY_WEEKS):
+        monday = first_monday + timedelta(weeks=week)
+        # A weekly weigh-in that drifts toward the goal, with a little noise so
+        # the line looks measured rather than computed.
+        weight = student.start_weight_kg + student.weekly_weight_delta * week
+        if monday <= today:
+            metrics.append(
+                {
+                    "measured_on": monday,
+                    "weight_kg": round(weight + rng.uniform(-0.4, 0.4), 1),
+                }
+            )
+
+        for weekday in _TRAINING_WEEKDAYS:
+            day = monday + timedelta(days=weekday)
+            if day > today or rng.random() > student.adherence:
+                continue
+            for name, start_kg, reps, weekly_gain in student.lifts:
+                exercise_id = exercise_ids.get(name)
+                if exercise_id is None:  # catalog changed; skip rather than fail
+                    continue
+                lifted = _plate_rounded(start_kg + weekly_gain * week) if start_kg else 0.0
+                logs.append(
+                    {
+                        "exercise_id": exercise_id,
+                        "logged_on": day,
+                        "weight_kg": lifted,
+                        # Bodyweight work progresses in reps instead of kilos.
+                        "reps": reps if start_kg else reps + week // 3,
+                        "completed": rng.random() < 0.85,
+                    }
+                )
+    return logs, metrics
+
+
+async def _seed_coaching(session: AsyncSession) -> int:
+    """Give the demo trainer a roster with twelve weeks of history.
+
+    Skips any student that already has logs, so running the seed again (every
+    boot, in the deployed app) neither duplicates rows nor overwrites the real
+    progress a signed-in student has synced.
+    """
+    trainer_email = next(email for _, email, role in DEMO_USERS if role is UserRole.TRAINER)
+    trainer_id = await session.scalar(select(UserModel.id).where(UserModel.email == trainer_email))
+    exercise_ids = {
+        name_en: exercise_id
+        for exercise_id, name_en in await session.execute(
+            select(ExerciseModel.id, ExerciseModel.name_en)
+        )
+        if name_en
+    }
+    if trainer_id is None or not exercise_ids:
+        return 0  # catalog not seeded yet; nothing to attach history to
+
+    today = date.today()
+    seeded = 0
+    for index, student in enumerate(DEMO_STUDENTS):
+        user_id = await session.scalar(select(UserModel.id).where(UserModel.email == student.email))
+        if user_id is None:
+            continue
+        await session.merge(
+            StudentProfileModel(
+                user_id=user_id,
+                birth_year=today.year - student.age,
+                height_cm=student.height_cm,
+                goal=student.goal,
+                level=student.level,
+            )
+        )
+        linked = await session.scalar(
+            select(TrainerStudentModel.id).where(
+                TrainerStudentModel.trainer_id == trainer_id,
+                TrainerStudentModel.student_id == user_id,
+            )
+        )
+        if linked is None:
+            session.add(TrainerStudentModel(trainer_id=trainer_id, student_id=user_id))
+
+        has_history = await session.scalar(
+            select(WorkoutLogModel.id).where(WorkoutLogModel.user_id == user_id).limit(1)
+        )
+        if has_history:
+            continue
+        # Fixed seed per student: the same demo data on every machine. Not a
+        # security context — this only shapes fake training history.
+        rng = random.Random(index)  # noqa: S311  # nosec B311
+        logs, metrics = _generate_history(student, exercise_ids, today, rng)
+        session.add_all(WorkoutLogModel(user_id=user_id, **log) for log in logs)
+        session.add_all(BodyMetricModel(user_id=user_id, **metric) for metric in metrics)
+        seeded += 1
+
+    await session.commit()
+    return seeded
 
 
 async def _seed_foods(session: AsyncSession) -> int:
@@ -1348,12 +1636,20 @@ async def _seed_foods(session: AsyncSession) -> int:
 
 
 async def seed(session: AsyncSession) -> bool:
-    """Populate the catalog if empty. Returns True if any data was inserted."""
+    """Populate every catalog that needs it. Returns True if anything was inserted."""
     users_inserted = await _seed_users(session, get_settings().demo_password)
     foods_inserted = await _seed_foods(session)
+    catalog_inserted = await _seed_catalog(session)
+    # Last: the history needs both the demo users and the exercise catalog.
+    coaching_inserted = await _seed_coaching(session)
+    return bool(users_inserted or foods_inserted or catalog_inserted or coaching_inserted)
+
+
+async def _seed_catalog(session: AsyncSession) -> bool:
+    """Insert muscles and exercises, only when the catalog is still empty."""
     existing = await session.scalar(select(func.count()).select_from(MuscleModel))
     if existing:
-        return bool(foods_inserted or users_inserted)
+        return False
 
     muscles = {
         svg_id: MuscleModel(

@@ -1,7 +1,8 @@
-// Sample data for the trainers/coaching preview. This is a mockup of the future
-// (monetizable) personal-trainer feature — no login, no real payments, no backend.
+// Sample data for the trainers/coaching preview: the trainers on offer and the
+// exercises a coach can assign. Still a mockup — no real payments. The students
+// are no longer here: they come from the coaching API (see ADR-0021).
 
-import type { Difficulty, Goal } from '@/api/types'
+import type { Goal } from '@/api/types'
 
 export interface Trainer {
   id: number
@@ -10,22 +11,6 @@ export interface Trainer {
   rating: number
   pricePerMonth: number // euros
   initials: string
-}
-
-export interface StudentProgress {
-  exercise: string
-  best: number // kg
-  sessions: number
-}
-
-export interface Student {
-  id: number
-  name: string
-  goal: Goal
-  level: Difficulty
-  lastActiveDays: number
-  initials: string
-  progress: StudentProgress[]
 }
 
 export const TRAINERS: Trainer[] = [
@@ -60,47 +45,6 @@ export const TRAINERS: Trainer[] = [
     rating: 4.7,
     pricePerMonth: 29,
     initials: 'LT',
-  },
-]
-
-export const STUDENTS: Student[] = [
-  {
-    id: 1,
-    name: 'Javier M.',
-    goal: 'hypertrophy',
-    level: 'intermediate',
-    lastActiveDays: 2,
-    initials: 'JM',
-    progress: [
-      { exercise: 'Barbell curl', best: 35, sessions: 6 },
-      { exercise: 'Barbell bench press', best: 70, sessions: 8 },
-      { exercise: 'Barbell back squat', best: 90, sessions: 7 },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Lucía P.',
-    goal: 'fat_loss',
-    level: 'beginner',
-    lastActiveDays: 1,
-    initials: 'LP',
-    progress: [
-      { exercise: 'Goblet squat', best: 16, sessions: 4 },
-      { exercise: 'Lat pulldown', best: 30, sessions: 5 },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Diego R.',
-    goal: 'strength',
-    level: 'advanced',
-    lastActiveDays: 5,
-    initials: 'DR',
-    progress: [
-      { exercise: 'Barbell back squat', best: 140, sessions: 12 },
-      { exercise: 'Romanian deadlift', best: 120, sessions: 10 },
-      { exercise: 'Overhead press', best: 55, sessions: 9 },
-    ],
   },
 ]
 
