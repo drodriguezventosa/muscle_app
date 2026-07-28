@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import {
@@ -8,14 +8,31 @@ import {
   type StudentDashboard,
   type StudentSummary,
 } from '@/api/coaching'
+import BarChart, { type Bar } from '@/components/charts/BarChart.vue'
+import LineChart, { type LineSeries } from '@/components/charts/LineChart.vue'
+import ScatterChart, { type ScatterPoint } from '@/components/charts/ScatterChart.vue'
 import { ASSIGNABLE } from '@/data/coaching'
 import { useCoachingStore } from '@/stores/coaching'
 
-// Trainer-only area (the route is guarded): the people this coach follows, with
-// the history they have actually logged. The charts land in the next phase; the
-// numbers below already come from the server.
+// Trainer-only area (the route is guarded): the people this coach follows and
+// how they are evolving. Every number and every mark comes from the history
+// the students have logged.
 const { t, locale } = useI18n()
 const coaching = useCoachingStore()
+
+// Categorical slots, in the fixed order the palette was validated in. The set
+// of exercises is fixed per student and never filtered, so a slot always means
+// the same line within a chart.
+const SERIES_COLORS = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)']
+// The goal a student trains for, mapped to a slot by identity — the mapping is
+// the same for every roster, so a colour never changes meaning between views.
+const GOAL_COLORS: Record<string, string> = {
+  fat_loss: 'var(--series-1)',
+  hypertrophy: 'var(--series-2)',
+  strength: 'var(--series-3)',
+}
+// The WHO healthy range, drawn as a reference band behind the students.
+const HEALTHY_BMI: [number, number] = [18.5, 25]
 
 const students = ref<StudentSummary[]>([])
 const selected = ref<StudentSummary | null>(null)
@@ -62,6 +79,70 @@ function daysSince(day: string | null): number | null {
 function current(points: { value: number }[]): number {
   return points.length ? points[points.length - 1].value : 0
 }
+
+/** Up to two initials, the same shorthand the roster avatars use. */
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
+function formatDay(day: string, withYear = false): string {
+  return new Date(`${day}T00:00:00`).toLocaleDateString(locale.value, {
+    day: 'numeric',
+    month: 'short',
+    ...(withYear ? { year: 'numeric' } : {}),
+  })
+}
+
+const strengthSeries = computed<LineSeries[]>(() =>
+  (dashboard.value?.strength ?? []).map((progression, index) => ({
+    key: progression.exerciseId,
+    name: progression.exerciseName,
+    color: SERIES_COLORS[index % SERIES_COLORS.length],
+    points: progression.points.map((point) => ({ on: point.on, value: point.value })),
+  })),
+)
+
+const weightSeries = computed<LineSeries[]>(() => {
+  const points = dashboard.value?.bodyWeight ?? []
+  // A line needs two points to say anything; one measurement is just the KPI.
+  if (points.length < 2) return []
+  return [
+    {
+      key: 'weight',
+      name: t('students.weightTitle'),
+      color: 'var(--series-1)',
+      points: points.map((point) => ({ on: point.on, value: point.value })),
+    },
+  ]
+})
+
+const adherenceBars = computed<Bar[]>(() =>
+  (dashboard.value?.adherence ?? []).map((week) => ({
+    label: formatDay(week.weekStart),
+    title: t('students.weekOf', { date: formatDay(week.weekStart, true) }),
+    value: week.sessions,
+  })),
+)
+
+/** One dot per student with both attributes known; colour carries the goal. */
+const rosterPoints = computed<ScatterPoint[]>(() =>
+  students.value
+    .filter((student) => student.age !== null && student.bmi !== null)
+    .map((student) => ({
+      key: student.id,
+      initials: initialsOf(student.name),
+      name: student.name,
+      x: student.age as number,
+      y: student.bmi as number,
+      group: student.goal ?? 'unknown',
+      groupLabel: student.goal ? t(`goal.${student.goal}`) : '—',
+      color: student.goal ? GOAL_COLORS[student.goal] : 'var(--color-muted)',
+    })),
+)
 </script>
 
 <template>
@@ -91,7 +172,7 @@ function current(points: { value: number }[]): number {
             :class="{ on: selected?.id === st.id }"
             @click="select(st)"
           >
-            <span class="avatar sm" aria-hidden="true">{{ st.name.slice(0, 1) }}</span>
+            <span class="avatar sm" aria-hidden="true">{{ initialsOf(st.name) }}</span>
             <span class="student-info">
               <span class="student-name">{{ st.name }}</span>
               <span class="student-meta">
@@ -114,7 +195,19 @@ function current(points: { value: number }[]): number {
       </ul>
 
       <div class="detail glass">
-        <p v-if="!selected" class="hint">{{ t('trainers.selectStudent') }}</p>
+        <!-- Nothing selected: the roster as a whole, so the panel is never empty. -->
+        <template v-if="!selected">
+          <h2 class="detail-name">{{ t('students.rosterTitle') }}</h2>
+          <p class="hint">{{ t('trainers.selectStudent') }}</p>
+          <ScatterChart
+            v-if="rosterPoints.length"
+            :points="rosterPoints"
+            :x-label="t('students.ageAxis')"
+            :y-label="t('students.kpiBmi')"
+            :y-band="HEALTHY_BMI"
+            :y-band-label="t('students.healthyBmi')"
+          />
+        </template>
         <template v-else>
           <h2 class="detail-name">{{ selected.name }}</h2>
 
@@ -153,16 +246,34 @@ function current(points: { value: number }[]): number {
           <h3 class="section">{{ t('students.strengthTitle') }}</h3>
           <p v-if="loadingDetail" class="hint">{{ t('students.loading') }}</p>
           <p v-else-if="!dashboard?.strength.length" class="hint">{{ t('students.noStrength') }}</p>
-          <ul v-else class="progress-list">
-            <li v-for="p in dashboard.strength" :key="p.exerciseId" class="progress-row">
-              <span class="ex">{{ p.exerciseName }}</span>
-              <span class="stat">
-                {{ current(p.points) }} kg ·
-                {{ t('students.sessionsCount', { n: p.points.length }, p.points.length) }}
-                <span v-if="p.gainPct > 0" class="gain">+{{ p.gainPct }}%</span>
-              </span>
-            </li>
-          </ul>
+          <template v-else>
+            <LineChart :series="strengthSeries" unit="kg" :height="230" />
+            <!-- The gain per exercise is the number the trainer acts on, so it
+                 stays written out instead of living only in the chart. -->
+            <ul class="progress-list">
+              <li v-for="p in dashboard.strength" :key="p.exerciseId" class="progress-row">
+                <span class="ex">{{ p.exerciseName }}</span>
+                <span class="stat">
+                  {{ current(p.points) }} kg ·
+                  {{ t('students.sessionsCount', { n: p.points.length }, p.points.length) }}
+                  <span v-if="p.gainPct > 0" class="gain">+{{ p.gainPct }}%</span>
+                </span>
+              </li>
+            </ul>
+          </template>
+
+          <template v-if="!loadingDetail && weightSeries.length">
+            <h3 class="section">{{ t('students.weightTitle') }}</h3>
+            <LineChart :series="weightSeries" unit="kg" area :height="180" />
+          </template>
+
+          <template v-if="!loadingDetail && adherenceBars.length">
+            <h3 class="section">
+              {{ t('students.adherenceTitle') }}
+              <span class="assigned">{{ t('students.adherenceHint') }}</span>
+            </h3>
+            <BarChart :bars="adherenceBars" :height="170" />
+          </template>
 
           <h3 class="section">
             {{ t('trainers.assign') }}

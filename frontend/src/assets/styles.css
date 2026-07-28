@@ -35,8 +35,26 @@
   --blur: 14px;
 }
 
+/* Data-visualization palette. Four categorical slots, in fixed order: the order
+   itself is the colorblind-safety mechanism, so slots are assigned by entity and
+   never cycled or re-ranked. Both sets were validated against the actual chart
+   surfaces (dark #121620, light #fbfcfe) for CVD separation, lightness and
+   chroma. On the light surface, aqua and yellow fall below 3:1 contrast — which
+   is why every chart ships direct labels and a table view, never color alone. */
+:root {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --viz-grid: rgba(255, 255, 255, 0.09);
+  /* The opaque equivalent of a card over the page background: marks use it for
+     the 2px ring/gap that separates them, so it must match what is behind. */
+  --viz-surface: #121620;
+}
+
 /* Light theme: same tokens, bright surfaces + darker text/accents for contrast.
    Toggled via `data-theme="light"` on <html>. */
+
 :root[data-theme='light'] {
   --color-bg: #eef2fb;
   --color-bg-2: #e1e7f4;
@@ -55,6 +73,12 @@
   --color-header: rgba(255, 255, 255, 0.7);
   --color-elevated: #ffffff;
   --color-input: rgba(15, 22, 40, 0.04);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --viz-grid: rgba(15, 22, 40, 0.12);
+  --viz-surface: #fbfcfe;
 }
 
 html {
