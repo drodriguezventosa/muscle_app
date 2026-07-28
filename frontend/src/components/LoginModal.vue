@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
@@ -26,6 +26,10 @@ const router = useRouter()
 
 // Signing in as a student is the common case, so it is the default.
 const kind = ref<AccountKind>('client')
+// When the blocked action belongs to one role — hiring a trainer is a student's
+// — the picker is not shown: offering the other role would only lead to a dead
+// end after signing in.
+const locked = computed<AccountKind | null>(() => auth.requiredRole ?? null)
 // Typed explicitly: ACCOUNTS is `as const`, so inference would pin the ref to
 // the client's literal email and reject the trainer's.
 const email = ref<string>(ACCOUNTS.client.email)
@@ -64,7 +68,9 @@ watch(
   async (open) => {
     if (!open) return
     auth.error = null
-    choose(kind.value) // refresh the fields in case they were edited and cancelled
+    // Refresh the fields in case they were edited and cancelled, honouring the
+    // role the action requires.
+    choose(locked.value ?? kind.value)
     await nextTick()
     dialog.value?.querySelector('input')?.focus()
   },
@@ -93,23 +99,27 @@ watch(
 
           <p class="demo-banner" role="note">{{ t('auth.demoBanner') }}</p>
 
-          <!-- Role picker: switching also refills the credentials below. -->
-          <p id="role-caption" class="roles-caption">{{ t('auth.howToEnter') }}</p>
-          <div class="roles" role="radiogroup" aria-labelledby="role-caption">
-            <button
-              v-for="(account, key) in ACCOUNTS"
-              :key="key"
-              type="button"
-              class="role"
-              :class="{ active: kind === key }"
-              role="radio"
-              :aria-checked="kind === key"
-              @click="choose(key)"
-            >
-              <span class="role-icon" aria-hidden="true">{{ account.icon }}</span>
-              {{ key === 'client' ? t('auth.roleClient') : t('auth.roleTrainer') }}
-            </button>
-          </div>
+          <!-- Role picker: switching also refills the credentials below. Hidden
+               when the action only makes sense for one role. -->
+          <p v-if="locked" class="roles-caption">{{ t(`auth.only.${locked}`) }}</p>
+          <template v-else>
+            <p id="role-caption" class="roles-caption">{{ t('auth.howToEnter') }}</p>
+            <div class="roles" role="radiogroup" aria-labelledby="role-caption">
+              <button
+                v-for="(account, key) in ACCOUNTS"
+                :key="key"
+                type="button"
+                class="role"
+                :class="{ active: kind === key }"
+                role="radio"
+                :aria-checked="kind === key"
+                @click="choose(key)"
+              >
+                <span class="role-icon" aria-hidden="true">{{ account.icon }}</span>
+                {{ key === 'client' ? t('auth.roleClient') : t('auth.roleTrainer') }}
+              </button>
+            </div>
+          </template>
 
           <form class="form" @submit.prevent="submit">
             <!-- Floating labels: the field reads as a single object, and the

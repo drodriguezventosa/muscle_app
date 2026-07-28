@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-import { login as loginRequest, type AuthUser, type Session } from '@/api/auth'
+import { login as loginRequest, type AuthUser, type Session, type UserRole } from '@/api/auth'
 import { setAccessToken } from '@/api/client'
 import { i18n } from '@/i18n'
 
@@ -35,6 +35,10 @@ export const useAuthStore = defineStore('auth', () => {
   // and, once signed in, the user continues where they were headed.
   const promptOpen = ref(false)
   const pendingRedirect = ref<string | null>(null)
+  // The role the blocked action needs, when only one can perform it: hiring a
+  // trainer is a student's action, so offering "sign in as trainer" there would
+  // walk the user into a dead end.
+  const requiredRole = ref<UserRole | null>(null)
 
   setAccessToken(token.value) // so the very first request after a reload is authenticated
 
@@ -70,8 +74,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function promptSignIn(redirectTo?: string): void {
+  function promptSignIn(redirectTo?: string, role?: UserRole): void {
     pendingRedirect.value = redirectTo ?? null
+    requiredRole.value = role ?? null
     error.value = null
     promptOpen.value = true
   }
@@ -96,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     error,
     promptOpen,
+    requiredRole,
     signIn,
     signOut,
     promptSignIn,

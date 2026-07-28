@@ -62,4 +62,24 @@ describe('auth store', () => {
     )
     expect(useAuthStore().isSignedIn).toBe(false)
   })
+
+  it('remembers the role an action needs, so the modal offers only that one', () => {
+    const auth = useAuthStore()
+
+    auth.promptSignIn('/trainers', 'client')
+
+    expect(auth.promptOpen).toBe(true)
+    expect(auth.requiredRole).toBe('client')
+    expect(auth.consumeRedirect()).toBe('/trainers')
+  })
+
+  it('leaves the choice open when any role can do it', () => {
+    const auth = useAuthStore()
+
+    auth.promptSignIn('/trainers', 'client')
+    auth.promptSignIn()
+
+    // Not sticky: the previous restriction must not outlive its action.
+    expect(auth.requiredRole).toBeNull()
+  })
 })
