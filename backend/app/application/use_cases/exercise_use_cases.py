@@ -12,3 +12,13 @@ class GetExercise:
 
     async def execute(self, exercise_id: int) -> Exercise | None:
         return await self._exercises.get_by_id(exercise_id)
+
+
+class SearchExercises:
+    """Find catalog exercises by name, for pickers like the trainer's calendar."""
+
+    def __init__(self, exercises: ExerciseRepository) -> None:
+        self._exercises = exercises
+
+    async def execute(self, search: str | None, limit: int) -> list[Exercise]:
+        return await self._exercises.list_catalog(limit=limit, search=search)

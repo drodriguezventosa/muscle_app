@@ -89,3 +89,18 @@ export async function getMuscleExercises(
   const payload = await api.get<ExercisePayload[]>(`/muscles/${svgId}/exercises?${query(filters)}`)
   return payload.map(toExercise)
 }
+
+/** A catalog entry as shown in a picker: just enough to choose one. */
+export interface ExerciseOption {
+  id: number
+  name: string
+}
+
+/** Search the catalog by name (either language), for the trainer's calendar. */
+export async function searchExercises(query: string, limit = 8): Promise<ExerciseOption[]> {
+  const lang = i18n.global.locale.value
+  const payload = await api.get<ExercisePayload[]>(
+    `/exercises?q=${encodeURIComponent(query)}&limit=${limit}&lang=${lang}`,
+  )
+  return payload.map((exercise) => ({ id: exercise.id, name: exercise.name }))
+}

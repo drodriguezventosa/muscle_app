@@ -5,17 +5,23 @@ Everything here requires a signed-in user. Trainer-only routes go through
 the user id comes from the token, never from the request body (OWASP A01).
 """
 
+from datetime import date, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.api.v1.deps import (
     CurrentUser,
     TrainerUser,
     provide_get_own_progress,
+    provide_list_own_plan,
+    provide_list_student_plan,
     provide_list_students,
+    provide_report_plan_item,
+    provide_schedule_exercise,
     provide_student_dashboard,
     provide_sync_progress,
+    provide_unschedule_exercise,
 )
 from app.api.v1.schemas.coaching import (
     ExerciseProgressionRead,
@@ -26,6 +32,11 @@ from app.api.v1.schemas.coaching import (
     SyncProgressResponse,
     WeeklyAdherenceRead,
 )
+from app.api.v1.schemas.plan import (
+    PlanItemRead,
+    ReportPlanItemRequest,
+    ScheduleExerciseRequest,
+)
 from app.application.dto.coaching import ProgressUpdate, StudentDashboard
 from app.application.use_cases.coaching_use_cases import (
     GetOwnProgress,
@@ -34,10 +45,24 @@ from app.application.use_cases.coaching_use_cases import (
     StudentNotFoundError,
     SyncProgress,
 )
+from app.application.use_cases.plan_use_cases import (
+    ListOwnPlan,
+    ListStudentPlan,
+    PlanItemNotFoundError,
+    ReportPlanItem,
+    ScheduledExercise,
+    ScheduleExercise,
+    StudentNotAssignedError,
+    UnknownExerciseError,
+    UnscheduleExercise,
+)
 from app.core.rate_limit import RATE_LIMIT, limiter
 from app.domain.entities.coaching import LoggedSession, Student
 
 router = APIRouter(prefix="/coaching", tags=["coaching"])
+
+# A week either side of today, which is what the calendar opens on.
+_DEFAULT_RANGE_DAYS = 7
 
 
 def _to_student_read(student: Student) -> StudentRead:
@@ -157,3 +182,148 @@ async def sync_progress(
         ),
     )
     return SyncProgressResponse(synced=synced)
+
+
+def _to_plan_read(scheduled: ScheduledExercise) -> PlanItemRead:
+    item = scheduled.item
+    return PlanItemRead(
+        id=item.id,
+        exercise_id=item.exercise_id,
+        exercise_name=item.exercise_name,
+        scheduled_on=item.scheduled_on,
+        target_sets=item.target_sets,
+        target_reps=item.target_reps,
+        target_weight_kg=item.target_weight_kg,
+        notes=item.notes,
+        done_weight_kg=item.done_weight_kg,
+        done_reps=item.done_reps,
+        status=scheduled.status,
+    )
+
+
+def _range(start: date | None, end: date | None, today: date | None = None) -> tuple[date, date]:
+    """Default to the week around today when the client sends no window."""
+    anchor = today or date.today()
+    return (
+        start or anchor - timedelta(days=_DEFAULT_RANGE_DAYS),
+        end or anchor + timedelta(days=_DEFAULT_RANGE_DAYS),
+    )
+
+
+@router.get(
+    "/students/{student_id}/plan",
+    response_model=list[PlanItemRead],
+    summary="Training calendar of one of the trainer's students",
+)
+async def student_plan(
+    student_id: int,
+    trainer: TrainerUser,
+    use_case: Annotated[ListStudentPlan, Depends(provide_list_student_plan)],
+    start: Annotated[date | None, Query(alias="from")] = None,
+    end: Annotated[date | None, Query(alias="to")] = None,
+) -> list[PlanItemRead]:
+    window = _range(start, end)
+    try:
+        scheduled = await use_case.execute(trainer.id, student_id, *window)
+    except StudentNotAssignedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
+        ) from exc
+    return [_to_plan_read(entry) for entry in scheduled]
+
+
+@router.post(
+    "/students/{student_id}/plan",
+    response_model=PlanItemRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Schedule an exercise for a student (or edit that day's targets)",
+)
+@limiter.limit(RATE_LIMIT)
+async def schedule_exercise(
+    request: Request,  # required by slowapi to identify the client
+    student_id: int,
+    payload: ScheduleExerciseRequest,
+    trainer: TrainerUser,
+    use_case: Annotated[ScheduleExercise, Depends(provide_schedule_exercise)],
+) -> PlanItemRead:
+    try:
+        item = await use_case.execute(
+            trainer_id=trainer.id,
+            student_id=student_id,
+            exercise_id=payload.exercise_id,
+            scheduled_on=payload.scheduled_on,
+            target_sets=payload.target_sets,
+            target_reps=payload.target_reps,
+            target_weight_kg=payload.target_weight_kg,
+            notes=payload.notes,
+        )
+    except StudentNotAssignedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
+        ) from exc
+    except UnknownExerciseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unknown exercise"
+        ) from exc
+    return _to_plan_read(ScheduledExercise(item, item.status(date.today())))
+
+
+@router.delete(
+    "/plan/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a scheduled exercise",
+)
+async def unschedule_exercise(
+    item_id: int,
+    trainer: TrainerUser,
+    use_case: Annotated[UnscheduleExercise, Depends(provide_unschedule_exercise)],
+) -> None:
+    try:
+        await use_case.execute(trainer.id, item_id)
+    except PlanItemNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Scheduled exercise not found"
+        ) from exc
+
+
+@router.get(
+    "/me/plan",
+    response_model=list[PlanItemRead],
+    summary="The signed-in student's training calendar",
+)
+async def my_plan(
+    user: CurrentUser,
+    use_case: Annotated[ListOwnPlan, Depends(provide_list_own_plan)],
+    start: Annotated[date | None, Query(alias="from")] = None,
+    end: Annotated[date | None, Query(alias="to")] = None,
+) -> list[PlanItemRead]:
+    scheduled = await use_case.execute(user.id, *_range(start, end))
+    return [_to_plan_read(entry) for entry in scheduled]
+
+
+@router.post(
+    "/me/plan/{item_id}/report",
+    response_model=PlanItemRead,
+    summary="Report what was lifted for a scheduled exercise",
+)
+@limiter.limit(RATE_LIMIT)
+async def report_plan_item(
+    request: Request,  # required by slowapi to identify the client
+    item_id: int,
+    payload: ReportPlanItemRequest,
+    user: CurrentUser,
+    use_case: Annotated[ReportPlanItem, Depends(provide_report_plan_item)],
+) -> PlanItemRead:
+    try:
+        item = await use_case.execute(
+            student_id=user.id,
+            item_id=item_id,
+            weight_kg=payload.weight_kg,
+            reps=payload.reps,
+            completed=payload.completed,
+        )
+    except PlanItemNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Scheduled exercise not found"
+        ) from exc
+    return _to_plan_read(ScheduledExercise(item, item.status(date.today())))

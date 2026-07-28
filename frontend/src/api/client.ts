@@ -36,6 +36,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     throw new ApiError(response.status, `Request to ${path} failed`)
   }
+  // 204 has no body to parse; callers of those endpoints expect nothing back.
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 
@@ -44,4 +46,5 @@ export const api = {
   post: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
   upload: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', body: form }),
+  remove: (path: string) => request<void>(path, { method: 'DELETE' }),
 }

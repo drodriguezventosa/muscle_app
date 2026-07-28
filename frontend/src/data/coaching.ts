@@ -1,6 +1,5 @@
-// Sample data for the trainers/coaching preview: the trainers on offer and the
-// exercises a coach can assign. Still a mockup — no real payments. The students
-// are no longer here: they come from the coaching API (see ADR-0021).
+// The trainers on offer in the hiring cards. Still a mockup — no real payments.
+// Students, their history and their plans all come from the API now.
 
 import type { Goal } from '@/api/types'
 
@@ -46,18 +45,4 @@ export const TRAINERS: Trainer[] = [
     pricePerMonth: 29,
     initials: 'LT',
   },
-]
-
-// Exercises a trainer can assign (a small slice of the catalog for the demo).
-export const ASSIGNABLE: string[] = [
-  'Barbell back squat',
-  'Barbell bench press',
-  'Romanian deadlift',
-  'Pull-up',
-  'Overhead press',
-  'Barbell curl',
-  'Triceps rope pushdown',
-  'Plank',
-  'Leg press',
-  'Bulgarian split squat',
 ]

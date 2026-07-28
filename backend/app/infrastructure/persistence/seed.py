@@ -33,6 +33,7 @@ from app.infrastructure.persistence.models.coaching import (
 from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
 from app.infrastructure.persistence.models.food import FoodModel
 from app.infrastructure.persistence.models.muscle import MuscleModel
+from app.infrastructure.persistence.models.plan import PlanItemModel
 from app.infrastructure.persistence.models.user import UserModel
 from app.infrastructure.security.hashing import Argon2Hasher
 
@@ -1635,6 +1636,66 @@ async def _seed_foods(session: AsyncSession) -> int:
     return len(missing)
 
 
+async def _seed_plan(session: AsyncSession) -> int:
+    """Put this week's routine on each demo student's calendar.
+
+    Written relative to today, so the demo always opens on a week with
+    something in it: past days are already logged (the history seed covers
+    them), today and the rest of the week are still pending.
+    """
+    existing = await session.scalar(select(func.count()).select_from(PlanItemModel))
+    if existing:
+        return 0
+
+    trainer_email = next(email for _, email, role in DEMO_USERS if role is UserRole.TRAINER)
+    trainer_id = await session.scalar(select(UserModel.id).where(UserModel.email == trainer_email))
+    exercise_ids = {
+        name_en: exercise_id
+        for exercise_id, name_en in await session.execute(
+            select(ExerciseModel.id, ExerciseModel.name_en)
+        )
+        if name_en
+    }
+    if trainer_id is None or not exercise_ids:
+        return 0
+
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
+    scheduled = 0
+    for student in DEMO_STUDENTS:
+        user_id = await session.scalar(select(UserModel.id).where(UserModel.email == student.email))
+        if user_id is None:
+            continue
+        # The same three lifts the student has been training, on their usual
+        # Monday/Wednesday/Friday, with the next step up as the target.
+        for weekday in _TRAINING_WEEKDAYS:
+            day = monday + timedelta(days=weekday)
+            for name, start_kg, reps, weekly_gain in student.lifts:
+                exercise_id = exercise_ids.get(name)
+                if exercise_id is None:
+                    continue
+                target = (
+                    _plate_rounded(start_kg + weekly_gain * (HISTORY_WEEKS + 1))
+                    if start_kg
+                    else None
+                )
+                session.add(
+                    PlanItemModel(
+                        trainer_id=trainer_id,
+                        student_id=user_id,
+                        exercise_id=exercise_id,
+                        scheduled_on=day,
+                        target_sets=3,
+                        target_reps=reps,
+                        target_weight_kg=target,
+                    )
+                )
+                scheduled += 1
+
+    await session.commit()
+    return scheduled
+
+
 async def seed(session: AsyncSession) -> bool:
     """Populate every catalog that needs it. Returns True if anything was inserted."""
     users_inserted = await _seed_users(session, get_settings().demo_password)
@@ -1642,7 +1703,10 @@ async def seed(session: AsyncSession) -> bool:
     catalog_inserted = await _seed_catalog(session)
     # Last: the history needs both the demo users and the exercise catalog.
     coaching_inserted = await _seed_coaching(session)
-    return bool(users_inserted or foods_inserted or catalog_inserted or coaching_inserted)
+    plan_inserted = await _seed_plan(session)
+    return bool(
+        users_inserted or foods_inserted or catalog_inserted or coaching_inserted or plan_inserted
+    )
 
 
 async def _seed_catalog(session: AsyncSession) -> bool:

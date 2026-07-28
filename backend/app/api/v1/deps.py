@@ -18,7 +18,7 @@ from app.application.use_cases.coaching_use_cases import (
     ListStudents,
     SyncProgress,
 )
-from app.application.use_cases.exercise_use_cases import GetExercise
+from app.application.use_cases.exercise_use_cases import GetExercise, SearchExercises
 from app.application.use_cases.muscle_use_cases import (
     GetMuscle,
     ListActiveMuscles,
@@ -30,6 +30,13 @@ from app.application.use_cases.nutrition_use_cases import (
     CalculateNutrition,
     ListFoods,
     RecommendMeals,
+)
+from app.application.use_cases.plan_use_cases import (
+    ListOwnPlan,
+    ListStudentPlan,
+    ReportPlanItem,
+    ScheduleExercise,
+    UnscheduleExercise,
 )
 from app.application.use_cases.recommend_exercises import RecommendExercises
 from app.application.use_cases.workout_use_cases import GenerateWorkout
@@ -51,6 +58,9 @@ from app.infrastructure.persistence.repositories.food_repository import (
 )
 from app.infrastructure.persistence.repositories.muscle_repository import (
     SqlAlchemyMuscleRepository,
+)
+from app.infrastructure.persistence.repositories.plan_repository import (
+    SqlAlchemyTrainingPlanRepository,
 )
 from app.infrastructure.persistence.repositories.user_repository import SqlAlchemyUserRepository
 from app.infrastructure.security.hashing import Argon2Hasher
@@ -96,6 +106,10 @@ def provide_muscle_exercises(session: SessionDep, locale: LocaleDep) -> ListMusc
 
 def provide_exercise(session: SessionDep, locale: LocaleDep) -> GetExercise:
     return GetExercise(SqlAlchemyExerciseRepository(session, locale))
+
+
+def provide_search_exercises(session: SessionDep, locale: LocaleDep) -> SearchExercises:
+    return SearchExercises(SqlAlchemyExerciseRepository(session, locale))
 
 
 def provide_generate_workout(session: SessionDep, locale: LocaleDep) -> GenerateWorkout:
@@ -164,6 +178,38 @@ def provide_get_own_progress(session: SessionDep, locale: LocaleDep) -> GetOwnPr
 
 def provide_sync_progress(session: SessionDep) -> SyncProgress:
     return SyncProgress(SqlAlchemyCoachingRepository(session))
+
+
+def provide_list_student_plan(session: SessionDep, locale: LocaleDep) -> ListStudentPlan:
+    return ListStudentPlan(
+        SqlAlchemyTrainingPlanRepository(session, locale),
+        SqlAlchemyCoachingRepository(session, locale),
+    )
+
+
+def provide_list_own_plan(session: SessionDep, locale: LocaleDep) -> ListOwnPlan:
+    return ListOwnPlan(SqlAlchemyTrainingPlanRepository(session, locale))
+
+
+def provide_schedule_exercise(session: SessionDep, locale: LocaleDep) -> ScheduleExercise:
+    return ScheduleExercise(
+        SqlAlchemyTrainingPlanRepository(session, locale),
+        SqlAlchemyCoachingRepository(session, locale),
+    )
+
+
+def provide_unschedule_exercise(session: SessionDep) -> UnscheduleExercise:
+    return UnscheduleExercise(
+        SqlAlchemyTrainingPlanRepository(session),
+        SqlAlchemyCoachingRepository(session),
+    )
+
+
+def provide_report_plan_item(session: SessionDep, locale: LocaleDep) -> ReportPlanItem:
+    return ReportPlanItem(
+        SqlAlchemyTrainingPlanRepository(session, locale),
+        SqlAlchemyCoachingRepository(session, locale),
+    )
 
 
 async def get_current_user(

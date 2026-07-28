@@ -14,6 +14,7 @@ from app.infrastructure.persistence.models.coaching import (
 from app.infrastructure.persistence.models.exercise import ExerciseModel, ExerciseMuscleModel
 from app.infrastructure.persistence.models.food import FoodModel
 from app.infrastructure.persistence.models.muscle import MuscleModel
+from app.infrastructure.persistence.models.plan import PlanItemModel
 from app.infrastructure.persistence.models.user import UserModel
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "ExerciseMuscleModel",
     "FoodModel",
     "MuscleModel",
+    "PlanItemModel",
     "StudentProfileModel",
     "TrainerStudentModel",
     "UserModel",

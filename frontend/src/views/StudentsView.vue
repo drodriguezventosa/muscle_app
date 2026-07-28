@@ -11,14 +11,12 @@ import {
 import BarChart, { type Bar } from '@/components/charts/BarChart.vue'
 import LineChart, { type LineSeries } from '@/components/charts/LineChart.vue'
 import ScatterChart, { type ScatterPoint } from '@/components/charts/ScatterChart.vue'
-import { ASSIGNABLE } from '@/data/coaching'
-import { useCoachingStore } from '@/stores/coaching'
+import StudentPlanEditor from '@/components/StudentPlanEditor.vue'
 
 // Trainer-only area (the route is guarded): the people this coach follows and
 // how they are evolving. Every number and every mark comes from the history
 // the students have logged.
 const { t, locale } = useI18n()
-const coaching = useCoachingStore()
 
 // Categorical slots, in the fixed order the palette was validated in. The set
 // of exercises is fixed per student and never filtered, so a slot always means
@@ -253,6 +251,12 @@ const rosterPoints = computed<ScatterPoint[]>(() =>
             </li>
           </ul>
 
+          <h3 class="section">
+            {{ t('plan.trainerTitle') }}
+            <span class="assigned">{{ t('plan.trainerHint') }}</span>
+          </h3>
+          <StudentPlanEditor :student-id="selected.id" />
+
           <!-- Each chart lives in a slot that already has its final height, so
                switching student dims the panel in place: no collapse, no jump
                back, nothing moving under the pointer. -->
@@ -300,30 +304,6 @@ const rosterPoints = computed<ScatterPoint[]>(() =>
               <p v-else class="hint">{{ t('students.loading') }}</p>
             </div>
           </template>
-
-          <h3 class="section">
-            {{ t('trainers.assign') }}
-            <span class="assigned">{{
-              t('trainers.assignedCount', { n: coaching.assigned(selected.id).length })
-            }}</span>
-          </h3>
-          <div class="assignables">
-            <label
-              v-for="ex in ASSIGNABLE"
-              :key="ex"
-              class="assignable"
-              :class="{ on: coaching.assigned(selected.id).includes(ex) }"
-            >
-              <input
-                type="checkbox"
-                :checked="coaching.assigned(selected.id).includes(ex)"
-                @change="coaching.toggle(selected.id, ex)"
-              />
-              <span class="box" aria-hidden="true"></span>
-              <span class="ex-name">{{ ex }}</span>
-            </label>
-          </div>
-          <p class="note">{{ t('trainers.assignNote') }}</p>
         </template>
       </div>
     </div>
@@ -652,84 +632,5 @@ h1 {
 }
 .stat {
   color: var(--color-muted);
-}
-.assignables {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: var(--space-xs);
-}
-/* Each option is a selectable chip: the whole row is the hit area, and the
-   native checkbox stays in the DOM (keyboard + screen readers) but hidden. */
-.assignable {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease;
-}
-.assignable:hover {
-  border-color: var(--color-accent);
-}
-.assignable.on {
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft);
-}
-.assignable input {
-  position: absolute;
-  opacity: 0;
-  width: 1px;
-  height: 1px;
-}
-.box {
-  flex: none;
-  display: inline-grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border: 1.5px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-surface-strong);
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease;
-}
-/* Checkmark drawn with a rotated rectangle, so no icon font is needed. */
-.box::after {
-  content: '';
-  width: 5px;
-  height: 9px;
-  border: solid transparent;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg) translate(-1px, -1px);
-  transition: border-color 0.18s ease;
-}
-.assignable.on .box {
-  background: var(--gradient);
-  border-color: transparent;
-}
-.assignable.on .box::after {
-  border-color: #06121a;
-}
-.assignable input:focus-visible + .box {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-.ex-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.note {
-  margin: var(--space-sm) 0 0;
-  color: var(--color-muted);
-  font-size: 0.82rem;
 }
 </style>

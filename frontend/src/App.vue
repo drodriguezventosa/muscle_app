@@ -117,6 +117,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <!-- A trainer manages students; everyone else browses trainers. -->
       <RouterLink v-if="auth.isTrainer" to="/students">{{ t('nav.students') }}</RouterLink>
       <RouterLink v-else to="/trainers">{{ t('nav.trainers') }}</RouterLink>
+      <!-- A signed-in student also has their own training calendar. -->
+      <RouterLink v-if="auth.isSignedIn && !auth.isTrainer" to="/plan">
+        {{ t('nav.plan') }}
+      </RouterLink>
     </nav>
     <!-- Session state: who is signed in, and a way out. -->
     <button
