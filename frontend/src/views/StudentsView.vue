@@ -51,16 +51,26 @@ onMounted(async () => {
   }
 })
 
+// Only the newest request may write: clicking down the list fires several, and
+// a slow earlier one must not land on top of the student now selected.
+let pendingRequest = 0
+
 async function select(student: StudentSummary): Promise<void> {
+  const request = ++pendingRequest
   selected.value = student
+  // The previous student's data is dropped straight away — stale numbers under
+  // a new name would be worse than a blank — but the slots below keep their
+  // height, so the panel dims in place instead of collapsing and jumping back.
   dashboard.value = null
   loadingDetail.value = true
   try {
-    dashboard.value = await getStudent(student.id)
+    const detail = await getStudent(student.id)
+    if (request !== pendingRequest) return
+    dashboard.value = detail
   } catch {
-    error.value = true
+    if (request === pendingRequest) error.value = true
   } finally {
-    loadingDetail.value = false
+    if (request === pendingRequest) loadingDetail.value = false
   }
 }
 
@@ -243,36 +253,52 @@ const rosterPoints = computed<ScatterPoint[]>(() =>
             </li>
           </ul>
 
+          <!-- Each chart lives in a slot that already has its final height, so
+               switching student dims the panel in place: no collapse, no jump
+               back, nothing moving under the pointer. -->
           <h3 class="section">{{ t('students.strengthTitle') }}</h3>
-          <p v-if="loadingDetail" class="hint">{{ t('students.loading') }}</p>
-          <p v-else-if="!dashboard?.strength.length" class="hint">{{ t('students.noStrength') }}</p>
-          <template v-else>
-            <LineChart :series="strengthSeries" unit="kg" :height="230" />
-            <!-- The gain per exercise is the number the trainer acts on, so it
-                 stays written out instead of living only in the chart. -->
-            <ul class="progress-list">
-              <li v-for="p in dashboard.strength" :key="p.exerciseId" class="progress-row">
-                <span class="ex">{{ p.exerciseName }}</span>
-                <span class="stat">
-                  {{ current(p.points) }} kg ·
-                  {{ t('students.sessionsCount', { n: p.points.length }, p.points.length) }}
-                  <span v-if="p.gainPct > 0" class="gain">+{{ p.gainPct }}%</span>
-                </span>
-              </li>
-            </ul>
-          </template>
+          <div class="slot strength" :class="{ busy: loadingDetail }" aria-live="polite">
+            <template v-if="dashboard?.strength.length">
+              <LineChart :series="strengthSeries" unit="kg" :height="230" />
+              <!-- The gain per exercise is the number the trainer acts on, so it
+                   stays written out instead of living only in the chart. -->
+              <ul class="progress-list">
+                <li v-for="p in dashboard.strength" :key="p.exerciseId" class="progress-row">
+                  <span class="ex">{{ p.exerciseName }}</span>
+                  <span class="stat">
+                    {{ current(p.points) }} kg ·
+                    {{ t('students.sessionsCount', { n: p.points.length }, p.points.length) }}
+                    <span v-if="p.gainPct > 0" class="gain">+{{ p.gainPct }}%</span>
+                  </span>
+                </li>
+              </ul>
+            </template>
+            <p v-else-if="!loadingDetail" class="hint">{{ t('students.noStrength') }}</p>
+            <p v-else class="hint">{{ t('students.loading') }}</p>
+          </div>
 
-          <template v-if="!loadingDetail && weightSeries.length">
+          <template v-if="loadingDetail || weightSeries.length">
             <h3 class="section">{{ t('students.weightTitle') }}</h3>
-            <LineChart :series="weightSeries" unit="kg" area :height="180" />
+            <div class="slot weight" :class="{ busy: loadingDetail }">
+              <LineChart
+                v-if="weightSeries.length"
+                :series="weightSeries"
+                unit="kg"
+                area
+                :height="180"
+              />
+            </div>
           </template>
 
-          <template v-if="!loadingDetail && adherenceBars.length">
+          <template v-if="loadingDetail || adherenceBars.length">
             <h3 class="section">
               {{ t('students.adherenceTitle') }}
               <span class="assigned">{{ t('students.adherenceHint') }}</span>
             </h3>
-            <BarChart :bars="adherenceBars" :height="170" />
+            <div class="slot adherence" :class="{ busy: loadingDetail }">
+              <BarChart v-if="adherenceBars.length" :bars="adherenceBars" :height="170" />
+              <p v-else class="hint">{{ t('students.loading') }}</p>
+            </div>
           </template>
 
           <h3 class="section">
@@ -556,6 +582,31 @@ h1 {
   margin-left: 6px;
   color: var(--color-accent);
   font-weight: 700;
+}
+/* Reserved space per chart (its height plus its legend, table toggle and, for
+   strength, the per-exercise list). Holding the frame is what stops the panel
+   from collapsing and springing back while the next student loads. */
+.slot {
+  transition: opacity 0.18s ease;
+}
+.slot.busy {
+  opacity: 0.5;
+  display: grid;
+  place-items: center;
+}
+.slot.strength {
+  min-height: 400px;
+}
+.slot.weight {
+  min-height: 210px;
+}
+.slot.adherence {
+  min-height: 200px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slot {
+    transition: none;
+  }
 }
 .hint.error {
   color: var(--color-danger);
