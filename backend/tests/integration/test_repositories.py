@@ -81,6 +81,112 @@ async def test_exercise_repository_list_catalog_applies_filters(session: AsyncSe
     assert all(e.difficulty == Difficulty.BEGINNER for e in by_level)
 
 
+async def test_the_seed_writes_the_days_a_narrower_window_left_empty(
+    session: AsyncSession,
+) -> None:
+    """Regression: the deployed calendar stayed at the single week it was seeded with.
+
+    Both the plan and the history bailed out when their table already had rows,
+    so widening the window (a week of demo data became the whole year) reached
+    production as a no-op — the same trap the food catalog fell into. Seeding a
+    narrow window and then a wider one is exactly that deploy.
+    """
+    from sqlalchemy import func
+    from sqlalchemy import select as sa_select
+
+    from app.infrastructure.persistence.models.coaching import WorkoutLogModel
+    from app.infrastructure.persistence.models.plan import PlanItemModel
+
+    async def counts() -> tuple[int, int]:
+        return (
+            int(await session.scalar(sa_select(func.count()).select_from(PlanItemModel)) or 0),
+            int(await session.scalar(sa_select(func.count()).select_from(WorkoutLogModel)) or 0),
+        )
+
+    await seed(session, weeks=1)
+    narrow_plan, narrow_logs = await counts()
+    assert narrow_plan and narrow_logs
+
+    await seed(session, weeks=4)
+    wide_plan, wide_logs = await counts()
+
+    assert wide_plan > narrow_plan
+    assert wide_logs > narrow_logs
+    # Widening does not duplicate what the narrow window already wrote.
+    stacked = await session.scalar(
+        sa_select(func.count()).select_from(
+            sa_select(PlanItemModel.student_id)
+            .group_by(
+                PlanItemModel.student_id,
+                PlanItemModel.exercise_id,
+                PlanItemModel.scheduled_on,
+            )
+            .having(func.count() > 1)
+            .subquery()
+        )
+    )
+    assert stacked == 0
+
+
+async def test_the_seed_leaves_a_day_the_trainer_edited_alone(session: AsyncSession) -> None:
+    # The trainer writes this same table from the app, so a re-seed must not
+    # resurrect a prescription they removed from a day they already worked on.
+    from sqlalchemy import delete, func
+    from sqlalchemy import select as sa_select
+
+    from app.infrastructure.persistence.models.plan import PlanItemModel
+
+    await seed(session, weeks=SEED_WEEKS)
+    day = await session.scalar(sa_select(func.min(PlanItemModel.scheduled_on)))
+    student_id = await session.scalar(
+        sa_select(PlanItemModel.student_id).where(PlanItemModel.scheduled_on == day).limit(1)
+    )
+    doomed = await session.scalar(
+        sa_select(PlanItemModel.id)
+        .where(PlanItemModel.scheduled_on == day, PlanItemModel.student_id == student_id)
+        .limit(1)
+    )
+    await session.execute(delete(PlanItemModel).where(PlanItemModel.id == doomed))
+    await session.commit()
+    before = await session.scalar(
+        sa_select(func.count())
+        .select_from(PlanItemModel)
+        .where(PlanItemModel.scheduled_on == day, PlanItemModel.student_id == student_id)
+    )
+
+    await seed(session, weeks=SEED_WEEKS)
+
+    after = await session.scalar(
+        sa_select(func.count())
+        .select_from(PlanItemModel)
+        .where(PlanItemModel.scheduled_on == day, PlanItemModel.student_id == student_id)
+    )
+    assert after == before
+
+
+async def test_the_seed_keeps_a_session_the_student_reported(session: AsyncSession) -> None:
+    # A student's own logged session shares the (exercise, day) key with a seeded
+    # one; the seed must never rewrite what they actually lifted.
+    from sqlalchemy import func, update
+    from sqlalchemy import select as sa_select
+
+    from app.infrastructure.persistence.models.coaching import WorkoutLogModel
+
+    await seed(session, weeks=SEED_WEEKS)
+    log_id = await session.scalar(sa_select(func.min(WorkoutLogModel.id)))
+    await session.execute(
+        update(WorkoutLogModel).where(WorkoutLogModel.id == log_id).values(weight_kg=123.5, reps=7)
+    )
+    await session.commit()
+
+    await seed(session, weeks=SEED_WEEKS)
+
+    kept = await session.scalar(
+        sa_select(WorkoutLogModel.weight_kg).where(WorkoutLogModel.id == log_id)
+    )
+    assert kept == 123.5
+
+
 async def test_food_seed_inserts_only_the_missing_foods(session: AsyncSession) -> None:
     # Regression: the seed used to insert only when the table was empty, so newly
     # curated foods never reached an already-populated (deployed) database.

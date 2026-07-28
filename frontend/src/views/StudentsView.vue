@@ -268,17 +268,20 @@ const rosterPoints = computed<ScatterPoint[]>(() =>
           <!-- Each chart lives in a slot that already has its final height, so
                switching student dims the panel in place: no collapse, no jump
                back, nothing moving under the pointer. -->
-          <h3 class="section">{{ t('students.strengthTitle') }}</h3>
+          <h3 class="section">
+            {{ t('students.strengthTitle') }}
+            <span class="assigned">{{ t('students.oneRmHint') }}</span>
+          </h3>
           <div class="slot strength" :class="{ busy: loadingDetail }" aria-live="polite">
             <template v-if="dashboard?.strength.length">
-              <LineChart :series="strengthSeries" unit="kg" :height="230" />
+              <LineChart :series="strengthSeries" :unit="t('students.oneRmUnit')" :height="230" />
               <!-- The gain per exercise is the number the trainer acts on, so it
                    stays written out instead of living only in the chart. -->
               <ul class="progress-list">
                 <li v-for="p in dashboard.strength" :key="p.exerciseId" class="progress-row">
                   <span class="ex">{{ p.exerciseName }}</span>
                   <span class="stat">
-                    {{ current(p.points) }} kg ·
+                    {{ current(p.points) }} {{ t('students.oneRmUnit') }} ·
                     {{ t('students.sessionsCount', { n: p.points.length }, p.points.length) }}
                     <span v-if="p.gainPct > 0" class="gain">+{{ p.gainPct }}%</span>
                   </span>

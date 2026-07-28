@@ -3,8 +3,8 @@
 from datetime import date, timedelta
 
 from httpx import AsyncClient
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from app.core.config import get_settings
 from app.infrastructure.persistence.models.exercise import ExerciseModel
@@ -243,6 +243,48 @@ async def test_hiring_another_trainer_replaces_the_current_one(api_client: Async
     assert (await api_client.get("/api/v1/coaching/me/trainer", headers=headers)).json()["id"] == (
         other["id"]
     )
+
+
+async def test_switching_trainers_works_on_the_deployed_constraint_shape(
+    api_client: AsyncClient, db_engine: AsyncEngine
+) -> None:
+    """Regression: switching trainers failed in production, and only there.
+
+    The deployed `trainer_students` still carried the older `UNIQUE (trainer_id,
+    student_id)`, since `create_all` never alters an existing table. Hiring a
+    *different* trainer therefore did not conflict: it added a second link, and
+    reading the student's trainer then raised — which the checkout modal
+    reported as a failed payment. Cancelling first worked, because that deleted
+    the row. The rule now holds in the repository, on either shape.
+    """
+    async with db_engine.begin() as conn:
+        await conn.execute(text("ALTER TABLE trainer_students DROP CONSTRAINT uq_trainer_student"))
+        await conn.execute(
+            text(
+                "ALTER TABLE trainer_students ADD CONSTRAINT uq_trainer_student "
+                "UNIQUE (trainer_id, student_id)"
+            )
+        )
+    headers = await _auth(api_client, CLIENT_EMAIL)
+    student_id = (await api_client.get("/api/v1/auth/me", headers=headers)).json()["id"]
+    trainers = (await api_client.get("/api/v1/coaching/trainers")).json()
+    other = next(trainer for trainer in trainers if trainer["name"] != "Ana López")
+
+    hired = await api_client.put(
+        "/api/v1/coaching/me/trainer", json={"trainer_id": other["id"]}, headers=headers
+    )
+
+    assert hired.status_code == 200
+    assert hired.json()["id"] == other["id"]
+    read_back = await api_client.get("/api/v1/coaching/me/trainer", headers=headers)
+    assert read_back.status_code == 200
+    assert read_back.json()["id"] == other["id"]
+    async with db_engine.begin() as conn:
+        links = await conn.scalar(
+            text("SELECT count(*) FROM trainer_students WHERE student_id = :id"),
+            {"id": student_id},
+        )
+    assert links == 1
 
 
 async def test_the_new_trainer_sees_the_student_and_the_old_one_does_not(

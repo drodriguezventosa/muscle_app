@@ -1713,9 +1713,13 @@ async def _seed_trainer_profiles(session: AsyncSession) -> int:
 async def _seed_coaching(session: AsyncSession, weeks: int | None = None) -> int:
     """Give the demo trainer a roster with a year of history behind it.
 
-    Skips any student that already has logs, so running the seed again (every
-    boot, in the deployed app) neither duplicates rows nor overwrites the real
-    progress a signed-in student has synced.
+    Incremental per day, not per student: it inserts the sessions that are
+    missing and leaves every row that already exists untouched. Skipping a
+    student who had *any* log meant the year of history never reached the
+    deployed database — it already held a few recent weeks from an earlier
+    release, so the widened window was silently ignored (the same trap the food
+    catalog fell into). Leaving existing rows alone is what keeps a student's own
+    synced progress safe: a redeploy must not rewrite what they actually did.
     """
     trainer_email = next(email for _, email, role in DEMO_USERS if role is UserRole.TRAINER)
     trainer_id = await session.scalar(select(UserModel.id).where(UserModel.email == trainer_email))
@@ -1756,11 +1760,6 @@ async def _seed_coaching(session: AsyncSession, weeks: int | None = None) -> int
                 .on_conflict_do_nothing(constraint="uq_trainer_student")
             )
 
-        has_history = await session.scalar(
-            select(WorkoutLogModel.id).where(WorkoutLogModel.user_id == user_id).limit(1)
-        )
-        if has_history:
-            continue
         # Fixed seed per student: the same demo data on every machine. Not a
         # security context — this only shapes fake training history.
         rng = random.Random(index)  # noqa: S311  # nosec B311
@@ -1773,18 +1772,38 @@ async def _seed_coaching(session: AsyncSession, weeks: int | None = None) -> int
             reliable_this_week=student.email == DEMO_STUDENTS[0].email,
             weeks=weeks,
         )
+        logged_days = {
+            (exercise_id, day)
+            for exercise_id, day in await session.execute(
+                select(WorkoutLogModel.exercise_id, WorkoutLogModel.logged_on).where(
+                    WorkoutLogModel.user_id == user_id
+                )
+            )
+        }
+        measured_days = set(
+            (
+                await session.scalars(
+                    select(BodyMetricModel.measured_on).where(BodyMetricModel.user_id == user_id)
+                )
+            ).all()
+        )
+        new_logs = [
+            log for log in logs if (log["exercise_id"], log["logged_on"]) not in logged_days
+        ]
+        new_metrics = [metric for metric in metrics if metric["measured_on"] not in measured_days]
         # Bulk-inserted: a year is a few thousand rows per student, and the ORM
         # would spend seconds building objects nobody reads. It also keeps the
         # integration tests quick, since each one re-seeds a fresh schema.
-        if logs:
+        if new_logs:
             await session.execute(
-                insert(WorkoutLogModel), [{"user_id": user_id, **log} for log in logs]
+                insert(WorkoutLogModel), [{"user_id": user_id, **log} for log in new_logs]
             )
-        if metrics:
+        if new_metrics:
             await session.execute(
-                insert(BodyMetricModel), [{"user_id": user_id, **metric} for metric in metrics]
+                insert(BodyMetricModel), [{"user_id": user_id, **metric} for metric in new_metrics]
             )
-        seeded += 1
+        if new_logs or new_metrics:
+            seeded += 1
 
     await session.commit()
     return seeded
@@ -1830,11 +1849,13 @@ async def _seed_plan(session: AsyncSession, weeks: int | None = None) -> int:
 
     Bulk-inserted: this is a few thousand rows, and the ORM would spend a second
     building objects nobody reads.
-    """
-    existing = await session.scalar(select(func.count()).select_from(PlanItemModel))
-    if existing:
-        return 0
 
+    Only the days that are missing are written. An "insert nothing if the table
+    has rows" guard kept the deployed calendar at the single week an earlier
+    release had seeded, and it would also fight the trainer: every prescription
+    they add or remove lives in this table, and re-running the seed must not
+    resurrect what they deleted or overwrite what they changed.
+    """
     trainer_email = next(email for _, email, role in DEMO_USERS if role is UserRole.TRAINER)
     trainer_id = await session.scalar(select(UserModel.id).where(UserModel.email == trainer_email))
     exercise_ids = {
@@ -1853,10 +1874,20 @@ async def _seed_plan(session: AsyncSession, weeks: int | None = None) -> int:
         user_id = await session.scalar(select(UserModel.id).where(UserModel.email == student.email))
         if user_id is None:
             continue
+        # A day that already carries a prescription belongs to whoever wrote it:
+        # the trainer edits this table from the app, so the seed fills the empty
+        # days of the year and never revisits one it (or they) already wrote.
+        prescribed_days = set(
+            (
+                await session.scalars(
+                    select(PlanItemModel.scheduled_on).where(PlanItemModel.student_id == user_id)
+                )
+            ).all()
+        )
         for week, monday in _demo_weeks(today, weeks):
             for weekday in _TRAINING_WEEKDAYS:
                 day = monday + timedelta(days=weekday)
-                if day.year != DEMO_YEAR:
+                if day.year != DEMO_YEAR or day in prescribed_days:
                     continue
                 for name, start_kg, reps, _ in student.lifts:
                     exercise_id = exercise_ids.get(name)

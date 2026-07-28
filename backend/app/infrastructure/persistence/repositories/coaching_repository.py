@@ -104,6 +104,11 @@ class SqlAlchemyCoachingRepository(CoachingRepository):
                 .join(TrainerProfileModel, TrainerProfileModel.user_id == UserModel.id)
                 .outerjoin(counts, counts.c.trainer_id == UserModel.id)
                 .where(TrainerStudentModel.student_id == student_id)
+                # A student has one trainer, so this is the only row — unless a
+                # database still carries a second link from the switching bug, in
+                # which case the most recent one is the answer and not a 500.
+                .order_by(TrainerStudentModel.id.desc())
+                .limit(1)
             )
         ).one_or_none()
         return self._to_trainer(*row) if row else None
@@ -118,15 +123,24 @@ class SqlAlchemyCoachingRepository(CoachingRepository):
         )
         if is_trainer is None:
             return None
-        # One trainer per student: the conflict target is the student, so hiring
-        # another one moves the link instead of adding a second.
-        statement = pg_insert(TrainerStudentModel).values(
-            trainer_id=trainer_id, student_id=student_id
-        )
+        # One trainer per student, enforced here rather than left to the unique
+        # constraint. Relying on the constraint alone made switching trainers
+        # fail on the deployed database, where the older shape of the constraint
+        # was still in place (`create_all` never alters an existing table): the
+        # new pair did not conflict, so the student ended up with two links and
+        # the read below raised. Clearing the other links first holds the rule on
+        # either shape, and repairs a row pair left behind by that bug.
         await self._session.execute(
-            statement.on_conflict_do_update(
-                constraint="uq_trainer_student", set_={"trainer_id": trainer_id}
+            delete(TrainerStudentModel).where(
+                TrainerStudentModel.student_id == student_id,
+                TrainerStudentModel.trainer_id != trainer_id,
             )
+        )
+        # No conflict target: the one that exists depends on the deployment.
+        await self._session.execute(
+            pg_insert(TrainerStudentModel)
+            .values(trainer_id=trainer_id, student_id=student_id)
+            .on_conflict_do_nothing()
         )
         await self._session.commit()
         return await self.get_trainer_of(student_id)
