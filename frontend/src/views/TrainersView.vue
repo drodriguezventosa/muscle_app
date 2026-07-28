@@ -17,8 +17,10 @@ const hiring = ref<Trainer | null>(null)
 // Browsing the trainers is open to everyone; hiring one is what needs an
 // account, which is exactly the moment worth asking for one.
 function hire(trainer: Trainer): void {
+  // Only a student can hire, so the sign-in offers only that: a trainer
+  // signing in here would land somewhere they cannot do what they came for.
   if (auth.isSignedIn) hiring.value = trainer
-  else auth.promptSignIn('/trainers')
+  else auth.promptSignIn('/trainers', 'client')
 }
 </script>
 

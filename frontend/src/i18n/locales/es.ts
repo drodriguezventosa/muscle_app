@@ -38,6 +38,10 @@ export default {
     plan: 'Mi plan',
   },
   auth: {
+    only: {
+      client: 'Para contratar un entrenador, entra como alumno.',
+      trainer: 'Esta zona es de entrenadores; entra con tu cuenta de entrenador.',
+    },
     roleClient: 'Alumno',
     roleTrainer: 'Entrenador',
     title: 'Entrar',

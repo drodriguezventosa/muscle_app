@@ -38,6 +38,10 @@ export default {
     plan: 'My plan',
   },
   auth: {
+    only: {
+      client: 'To hire a trainer, sign in as a student.',
+      trainer: 'This area is for trainers; sign in with your trainer account.',
+    },
     roleClient: 'Student',
     roleTrainer: 'Trainer',
     title: 'Sign in',

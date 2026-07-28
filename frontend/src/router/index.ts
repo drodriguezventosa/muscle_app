@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import type { UserRole } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 
 // Routes are lazy-loaded so each view ships in its own chunk (performance).
@@ -60,7 +61,8 @@ router.beforeEach((to) => {
     return true
   }
   // Sign-in is a modal, not a page: block the navigation and open it, keeping
-  // the intended route so the user lands there afterwards.
-  auth.promptSignIn(to.fullPath)
+  // the intended route so the user lands there afterwards. A route that only
+  // one role may enter offers that role alone.
+  auth.promptSignIn(to.fullPath, to.meta.role as UserRole | undefined)
   return false
 })
