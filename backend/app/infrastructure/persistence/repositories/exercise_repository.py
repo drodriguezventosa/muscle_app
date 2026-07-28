@@ -88,12 +88,21 @@ class SqlAlchemyExerciseRepository(ExerciseRepository):
         limit: int,
         equipment: Equipment | None = None,
         difficulty: Difficulty | None = None,
+        search: str | None = None,
     ) -> list[Exercise]:
         stmt = select(ExerciseModel)
         if equipment is not None:
             stmt = stmt.where(ExerciseModel.equipment == equipment)
         if difficulty is not None:
             stmt = stmt.where(ExerciseModel.difficulty == difficulty)
-        stmt = stmt.order_by(ExerciseModel.id).limit(limit)
+        if search:
+            # Matched against both languages: a trainer types "squat" or
+            # "sentadilla" and finds the same exercise. Escaped, and passed as a
+            # bound parameter — never string-built SQL.
+            pattern = f"%{search.strip().replace('%', '').replace('_', '')}%"
+            stmt = stmt.where(
+                ExerciseModel.name.ilike(pattern) | ExerciseModel.name_en.ilike(pattern)
+            )
+        stmt = stmt.order_by(ExerciseModel.name).limit(limit)
         result = await self._session.scalars(stmt)
         return [self._to_entity(m) for m in result.unique()]

@@ -25,6 +25,10 @@ Aplicación web para explorar los músculos del cuerpo y descubrir qué ejercici
   credenciales): un alumno puede contratar entrenador; un entrenador ve **su lista de alumnos**
   y la **evolución** de cada uno — progresión de fuerza (1RM estimado), peso corporal y
   adherencia semanal, sobre el histórico que registran en la app.
+- 🗓️ **Calendario de entrenamiento**: el entrenador programa la semana de cada alumno
+  (ejercicio, series, repeticiones y peso objetivo) y el alumno ve lo que le toca cada día y
+  registra lo que levantó — aunque no llegue al objetivo, que es justo lo que el entrenador
+  necesita saber.
 - 🧭 **Tutorial guiado** en la primera visita (saltable y repetible desde el botón «?»): recorre
   y **navega** por cada sección explicándola brevemente.
 - 🌗 **Modo claro/oscuro** y 🌍 **bilingüe** (ES/EN).

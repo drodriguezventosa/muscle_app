@@ -38,7 +38,9 @@ describe('BodyMap', () => {
 
   it('selects directly when the group has a single active muscle', async () => {
     const wrapper = mountMap()
-    const chest = wrapper.findAll('[role="button"]').find((n) => n.attributes('aria-label') === 'Chest')
+    const chest = wrapper
+      .findAll('[role="button"]')
+      .find((n) => n.attributes('aria-label') === 'Chest')
     await chest!.trigger('click')
     expect(wrapper.emitted('select')?.[0]).toEqual(['chest'])
     expect(wrapper.find('.popup').exists()).toBe(false)
@@ -46,7 +48,9 @@ describe('BodyMap', () => {
 
   it('opens a popup to choose a muscle when the group has several', async () => {
     const wrapper = mountMap()
-    const arms = wrapper.findAll('[role="button"]').find((n) => n.attributes('aria-label') === 'Arms')
+    const arms = wrapper
+      .findAll('[role="button"]')
+      .find((n) => n.attributes('aria-label') === 'Arms')
     await arms!.trigger('click')
     const popup = wrapper.find('.popup')
     expect(popup.exists()).toBe(true)

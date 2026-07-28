@@ -34,6 +34,13 @@ export const router = createRouter({
       component: () => import('@/views/StudentsView.vue'),
     },
     {
+      path: '/plan',
+      name: 'plan',
+      // The student's own calendar; a trainer has their students' instead.
+      meta: { requiresAuth: true, role: 'client' },
+      component: () => import('@/views/PlanView.vue'),
+    },
+    {
       path: '/trainers',
       name: 'trainers',
       component: () => import('@/views/TrainersView.vue'),

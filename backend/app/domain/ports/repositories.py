@@ -80,6 +80,7 @@ class ExerciseRepository(ABC):
         limit: int,
         equipment: Equipment | None = None,
         difficulty: Difficulty | None = None,
+        search: str | None = None,
     ) -> list[Exercise]:
         """Return catalog exercises matching the optional filters, unranked.
 
