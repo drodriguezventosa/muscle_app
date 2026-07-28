@@ -21,13 +21,16 @@ Aplicación web para explorar los músculos del cuerpo y descubrir qué ejercici
   un dietista-nutricionista.
 - 📈 **Progreso**: registra el peso por ejercicio y sigue tu evolución con sobrecarga
   progresiva (guardado en tu dispositivo).
-- 👤 **Entrenadores** (vista previa): contratar un entrenador y panel para gestionar alumnos.
+- 👤 **Entrenadores y alumnos** con inicio de sesión (cuentas de demostración, un clic, sin
+  credenciales): un alumno puede contratar entrenador; un entrenador ve **su lista de alumnos**
+  y la **evolución** de cada uno — progresión de fuerza (1RM estimado), peso corporal y
+  adherencia semanal, sobre el histórico que registran en la app.
 - 🧭 **Tutorial guiado** en la primera visita (saltable y repetible desde el botón «?»): recorre
   y **navega** por cada sección explicándola brevemente.
 - 🌗 **Modo claro/oscuro** y 🌍 **bilingüe** (ES/EN).
 - 🎨 Interfaz **moderna, minimalista y responsive**.
 
-_Auth, suscripciones y entrenadores personales (reales) están planificados como fase futura._
+_Las suscripciones y los pagos siguen siendo una simulación; el registro público llegará más adelante._
 
 ## Stack
 

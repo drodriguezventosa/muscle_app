@@ -28,3 +28,4 @@ sequentially; supersede rather than edit past decisions.
 | [0019](0019-embeddings-provider-jina.md) | Embeddings on Jina AI (Google's free tier blocks datacenter IPs) | accepted |
 | [0020](0020-meal-photo-estimation.md) | Meal-photo estimation (vision port, editable results) | accepted |
 | [0021](0021-coaching-data-and-progress-sync.md) | Coaching data: server-side history mirrored from the offline logger | accepted |
+| [0022](0022-hand-rolled-svg-charts.md) | Hand-rolled SVG charts with a validated palette | accepted |
