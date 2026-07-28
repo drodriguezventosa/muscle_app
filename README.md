@@ -27,8 +27,11 @@ Aplicación web para explorar los músculos del cuerpo y descubrir qué ejercici
   adherencia semanal, sobre el histórico que registran en la app.
 - 🗓️ **Calendario de entrenamiento**: el entrenador programa la semana de cada alumno
   (ejercicio, series, repeticiones y peso objetivo) y el alumno ve lo que le toca cada día y
-  registra lo que levantó — aunque no llegue al objetivo, que es justo lo que el entrenador
-  necesita saber.
+  registra **peso, repeticiones y series** — aunque no llegue al objetivo, que es justo lo que el
+  entrenador necesita saber.
+- 🤝 **Contratación real**: un alumno tiene **un entrenador** (y un entrenador, muchos alumnos).
+  Contratar escribe la relación en la base de datos y desbloquea su plan; el pago sigue siendo
+  una simulación, sin datos de tarjeta.
 - 🧭 **Tutorial guiado** en la primera visita (saltable y repetible desde el botón «?»): recorre
   y **navega** por cada sección explicándola brevemente.
 - 🌗 **Modo claro/oscuro** y 🌍 **bilingüe** (ES/EN).

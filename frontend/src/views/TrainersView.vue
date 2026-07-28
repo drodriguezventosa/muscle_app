@@ -1,18 +1,50 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
+import { listTrainers, type Trainer } from '@/api/coaching'
 import CheckoutModal from '@/components/CheckoutModal.vue'
-import { TRAINERS, type Trainer } from '@/data/coaching'
 import { useAuthStore } from '@/stores/auth'
-import { useSubscriptionsStore } from '@/stores/subscriptions'
+import { useCoachingStore } from '@/stores/coaching'
 
 const { t } = useI18n()
 const auth = useAuthStore()
-const subs = useSubscriptionsStore()
+const coaching = useCoachingStore()
 
+const trainers = ref<Trainer[]>([])
+const loading = ref(true)
+const error = ref(false)
 const hiring = ref<Trainer | null>(null)
+
+onMounted(async () => {
+  try {
+    trainers.value = await listTrainers()
+  } catch {
+    error.value = true
+  } finally {
+    loading.value = false
+  }
+  // Whether they already have one decides what every card offers.
+  await coaching.load()
+})
+
+const hired = computed(() => coaching.trainer)
+
+/** Two initials, the same shorthand the student avatars use. */
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
+// Hiring another trainer replaces the current one, so the button says so.
+const hireLabel = computed(() => {
+  if (!auth.isSignedIn) return t('trainers.hireSignIn')
+  return hired.value ? t('trainers.switch') : t('trainers.hire')
+})
 
 // Browsing the trainers is open to everyone; hiring one is what needs an
 // account, which is exactly the moment worth asking for one.
@@ -45,24 +77,35 @@ function hire(trainer: Trainer): void {
     <!-- Anyone can browse; hiring is what asks for an account. -->
     <p v-else-if="!auth.isSignedIn" class="notice animate-in">{{ t('trainers.signInToHire') }}</p>
 
+    <!-- Already hired someone: say who, since only one at a time is possible. -->
+    <p v-if="hired" class="notice animate-in">
+      {{ t('trainers.yourTrainer', { name: hired.name }) }}
+      <RouterLink to="/plan">{{ t('trainers.goToPlan') }}</RouterLink>
+    </p>
+
+    <p v-if="loading" class="notice">{{ t('trainers.loading') }}</p>
+    <p v-else-if="error" class="notice error" role="alert">{{ t('trainers.error') }}</p>
+
     <!-- Hire a trainer -->
-    <ul class="cards">
-      <li v-for="tr in TRAINERS" :key="tr.id" class="card glass">
-        <div class="avatar" aria-hidden="true">{{ tr.initials }}</div>
+    <ul v-else class="cards">
+      <li v-for="tr in trainers" :key="tr.id" class="card glass">
+        <div class="avatar" aria-hidden="true">{{ initialsOf(tr.name) }}</div>
         <h2 class="name">{{ tr.name }}</h2>
         <span class="badge">{{ t(`goal.${tr.specialty}`) }}</span>
         <p class="rating">★ {{ tr.rating.toFixed(1) }}</p>
+        <p v-if="tr.bio" class="bio">{{ tr.bio }}</p>
+        <p class="students">{{ t('trainers.studentsCount', tr.students) }}</p>
         <p class="price">
           {{ tr.pricePerMonth }} € <span>{{ t('trainers.perMonth') }}</span>
         </p>
-        <template v-if="subs.isActive(tr.id)">
+        <template v-if="hired?.id === tr.id">
           <p class="active-badge">✓ {{ t('trainers.active') }}</p>
-          <button type="button" class="cancel" @click="subs.cancel(tr.id)">
+          <button type="button" class="cancel" @click="coaching.cancel()">
             {{ t('trainers.cancel') }}
           </button>
         </template>
         <button v-else type="button" class="hire" @click="hire(tr)">
-          {{ auth.isSignedIn ? t('trainers.hire') : t('trainers.hireSignIn') }}
+          {{ hireLabel }}
         </button>
       </li>
     </ul>
@@ -85,6 +128,19 @@ function hire(trainer: Trainer): void {
 .notice a {
   color: var(--color-accent);
   font-weight: 600;
+}
+.notice.error {
+  color: var(--color-danger);
+}
+.bio {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+.students {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.74rem;
 }
 .trainers {
   display: flex;

@@ -8,6 +8,7 @@ from app.infrastructure.persistence.models.base import EMBEDDING_DIM, Base
 from app.infrastructure.persistence.models.coaching import (
     BodyMetricModel,
     StudentProfileModel,
+    TrainerProfileModel,
     TrainerStudentModel,
     WorkoutLogModel,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "MuscleModel",
     "PlanItemModel",
     "StudentProfileModel",
+    "TrainerProfileModel",
     "TrainerStudentModel",
     "UserModel",
     "WorkoutLogModel",

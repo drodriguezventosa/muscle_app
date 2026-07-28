@@ -28,6 +28,9 @@ from app.infrastructure.persistence.seed import seed
 from app.main import create_app
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+# Weeks of demo history and plan the tests seed: enough for a past week, the
+# current one and one ahead, which is what the assertions look at.
+SEED_WEEKS = 3
 
 
 @pytest.fixture(autouse=True)
@@ -74,7 +77,9 @@ async def api_client(db_engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
     """An HTTP client for the app, wired to the seeded test database."""
     factory = async_sessionmaker(db_engine, expire_on_commit=False)
     async with factory() as db_session:
-        await seed(db_session)
+        # A short window of demo data: the same shapes as production, without
+        # re-writing a year of history for every test.
+        await seed(db_session, weeks=SEED_WEEKS)
         # Backfill embeddings so the RAG search returns results in tests.
         await backfill_embeddings(db_session, FakeEmbedding(384))
 

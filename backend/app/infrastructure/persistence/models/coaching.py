@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, UniqueConstraint, func
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,10 +38,15 @@ class StudentProfileModel(Base):
 
 
 class TrainerStudentModel(Base):
-    """Which students a trainer follows. The roster drives every access check."""
+    """Which students a trainer follows (1 trainer → N students).
+
+    The roster drives every access check in the coaching area.
+    """
 
     __tablename__ = "trainer_students"
-    __table_args__ = (UniqueConstraint("trainer_id", "student_id", name="uq_trainer_student"),)
+    # Unique on the student alone: a student has at most one trainer, a trainer
+    # has many students. Hiring another one replaces the link.
+    __table_args__ = (UniqueConstraint("student_id", name="uq_trainer_student"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     trainer_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
@@ -82,3 +87,23 @@ class BodyMetricModel(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     measured_on: Mapped[date] = mapped_column(Date)
     weight_kg: Mapped[float] = mapped_column(Float)
+
+
+class TrainerProfileModel(Base):
+    """What a trainer offers, for the card a student picks from.
+
+    Kept apart from `users` for the same reason as the student profile: that
+    table is about identity, this one about the service.
+    """
+
+    __tablename__ = "trainer_profiles"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    specialty: Mapped[Goal] = mapped_column(SAEnum(Goal, native_enum=False, length=20))
+    # Public rating, 0-5. Demo data: there is no review flow yet.
+    rating: Mapped[float] = mapped_column(Float, default=5.0)
+    price_per_month: Mapped[int] = mapped_column(default=0)
+    bio: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    bio_en: Mapped[str | None] = mapped_column(String(240), nullable=True)

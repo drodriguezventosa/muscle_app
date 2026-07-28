@@ -30,3 +30,4 @@ sequentially; supersede rather than edit past decisions.
 | [0021](0021-coaching-data-and-progress-sync.md) | Coaching data: server-side history mirrored from the offline logger | accepted |
 | [0022](0022-hand-rolled-svg-charts.md) | Hand-rolled SVG charts with a validated palette | accepted |
 | [0023](0023-training-calendar.md) | Training calendar: prescription apart from what was lifted | accepted |
+| [0024](0024-one-trainer-per-student.md) | One trainer per student, and a demo year behind it | accepted |

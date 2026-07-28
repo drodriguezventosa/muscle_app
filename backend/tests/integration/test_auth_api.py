@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.infrastructure.persistence.seed import DEMO_USERS, seed
+from tests.integration.conftest import SEED_WEEKS
 
 TRAINER_EMAIL = "entrenador@demo.muscleapp"
 CLIENT_EMAIL = "alumno@demo.muscleapp"
@@ -21,7 +22,7 @@ async def _login(api_client: AsyncClient, email: str) -> str:
 async def test_seed_creates_the_demo_accounts_once(session: AsyncSession) -> None:
     from app.infrastructure.persistence.seed import _seed_users
 
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     # Re-running must not duplicate them (the seed is idempotent).
     assert await _seed_users(session, get_settings().demo_password) == 0
     assert {email for _, email, _ in DEMO_USERS} == {TRAINER_EMAIL, CLIENT_EMAIL}
@@ -30,7 +31,7 @@ async def test_seed_creates_the_demo_accounts_once(session: AsyncSession) -> Non
 async def test_login_returns_a_token_and_the_user(
     api_client: AsyncClient, session: AsyncSession
 ) -> None:
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     response = await api_client.post(
         "/api/v1/auth/login",
         json={"email": TRAINER_EMAIL, "password": get_settings().demo_password},
@@ -46,7 +47,7 @@ async def test_login_returns_a_token_and_the_user(
 async def test_login_with_a_wrong_password_is_401(
     api_client: AsyncClient, session: AsyncSession
 ) -> None:
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     response = await api_client.post(
         "/api/v1/auth/login", json={"email": TRAINER_EMAIL, "password": "not-the-password"}
     )
@@ -58,7 +59,7 @@ async def test_login_with_a_wrong_password_is_401(
 async def test_login_with_an_unknown_email_is_401_with_the_same_message(
     api_client: AsyncClient, session: AsyncSession
 ) -> None:
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     response = await api_client.post(
         "/api/v1/auth/login",
         json={"email": "nobody@demo.muscleapp", "password": get_settings().demo_password},
@@ -70,7 +71,7 @@ async def test_login_with_an_unknown_email_is_401_with_the_same_message(
 async def test_me_requires_a_token_and_returns_the_user(
     api_client: AsyncClient, session: AsyncSession
 ) -> None:
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     assert (await api_client.get("/api/v1/auth/me")).status_code == 401
 
     token = await _login(api_client, CLIENT_EMAIL)
@@ -82,7 +83,7 @@ async def test_me_requires_a_token_and_returns_the_user(
 
 
 async def test_a_garbage_token_is_401(api_client: AsyncClient, session: AsyncSession) -> None:
-    await seed(session)
+    await seed(session, weeks=SEED_WEEKS)
     response = await api_client.get(
         "/api/v1/auth/me", headers={"Authorization": "Bearer not-a-real-token"}
     )

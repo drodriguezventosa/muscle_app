@@ -5,12 +5,14 @@ import { useI18n } from 'vue-i18n'
 import { myPlan, reportPlanItem, type PlanItem } from '@/api/plan'
 import HealthDisclaimer from '@/components/HealthDisclaimer.vue'
 import WeekCalendar, { type DayMark } from '@/components/WeekCalendar.vue'
+import { useCoachingStore } from '@/stores/coaching'
 import { addDays, startOfWeek, todayISO } from '@/utils/dates'
 
 // The student's side of the coaching area: what the trainer scheduled, and a
 // place to say what was actually lifted. Reporting less than the target is
 // expected — it is how the trainer learns the plan was too ambitious.
 const { t } = useI18n()
+const coaching = useCoachingStore()
 
 const weekStart = ref(startOfWeek(todayISO()))
 const selectedDay = ref(todayISO())
@@ -112,7 +114,12 @@ function doneLabel(item: PlanItem): string {
         <span class="gradient-text">{{ t('plan.titleHighlight') }}</span>
         {{ t('plan.titleRest') }}
       </h1>
-      <p class="lead">{{ t('plan.lead') }}</p>
+      <p class="lead">
+        {{ t('plan.lead') }}
+        <template v-if="coaching.trainer">
+          {{ t('plan.byTrainer', { name: coaching.trainer.name }) }}
+        </template>
+      </p>
       <HealthDisclaimer />
     </header>
 
@@ -185,7 +192,9 @@ function doneLabel(item: PlanItem): string {
         <p v-else-if="!loading" class="empty">{{ t('plan.restDay') }}</p>
       </WeekCalendar>
 
-      <p v-if="!items.length && !loading" class="hint">{{ t('plan.noPlan') }}</p>
+      <p v-if="!items.length && !loading" class="hint">
+        {{ t('plan.noPlan', { name: coaching.trainer?.name ?? '' }) }}
+      </p>
     </div>
   </section>
 </template>

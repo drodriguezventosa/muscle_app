@@ -9,11 +9,13 @@ import LoginModal from '@/components/LoginModal.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useCoachingStore } from '@/stores/coaching'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const coaching = useCoachingStore()
 
 // Mobile navigation menu (hamburger). Hidden on desktop via CSS.
 const menuOpen = ref(false)
@@ -79,6 +81,8 @@ function onTourFinish(dontShowAgain: boolean): void {
 // entry point instead of staying on a page the user can no longer use.
 async function signOut(): Promise<void> {
   auth.signOut()
+  // The next student must not inherit this one's trainer.
+  coaching.reset()
   await router.push('/')
 }
 
@@ -86,6 +90,10 @@ function replayTour(): void {
   menuOpen.value = false
   showTour.value = true
 }
+
+// A reload starts with a token but no coaching state: read the link so the
+// navigation is right on the first paint after refreshing.
+onMounted(() => void coaching.load())
 
 // Close the menu after navigating (covers link taps, including the active one).
 watch(
@@ -117,8 +125,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <!-- A trainer manages students; everyone else browses trainers. -->
       <RouterLink v-if="auth.isTrainer" to="/students">{{ t('nav.students') }}</RouterLink>
       <RouterLink v-else to="/trainers">{{ t('nav.trainers') }}</RouterLink>
-      <!-- A signed-in student also has their own training calendar. -->
-      <RouterLink v-if="auth.isSignedIn && !auth.isTrainer" to="/plan">
+      <!-- A student sees their calendar once a trainer is writing it. -->
+      <RouterLink v-if="coaching.hasTrainer" to="/plan">
         {{ t('nav.plan') }}
       </RouterLink>
     </nav>

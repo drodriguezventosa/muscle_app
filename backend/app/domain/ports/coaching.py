@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from datetime import date
 
-from app.domain.entities.coaching import LoggedSession, Student, StudentDetail
+from app.domain.entities.coaching import LoggedSession, Student, StudentDetail, Trainer
 from app.domain.value_objects.enums import Difficulty, Goal
 
 
@@ -31,6 +31,26 @@ class CoachingRepository(ABC):
     @abstractmethod
     async def get_own_detail(self, user_id: int) -> StudentDetail | None:
         """Return the signed-in user's own history, or None if they have no profile."""
+
+    @abstractmethod
+    async def list_trainers(self) -> list[Trainer]:
+        """Return every trainer on offer, with their profile and student count."""
+
+    @abstractmethod
+    async def get_trainer_of(self, student_id: int) -> Trainer | None:
+        """Return the student's trainer, or None if they have not hired one."""
+
+    @abstractmethod
+    async def assign_trainer(self, student_id: int, trainer_id: int) -> Trainer | None:
+        """Link the student to that trainer, replacing any earlier one.
+
+        Returns the trainer, or None if the id is not a trainer. A student has
+        at most one: hiring again is a change, not a second subscription.
+        """
+
+    @abstractmethod
+    async def unassign_trainer(self, student_id: int) -> None:
+        """Drop the student's trainer link, if there is one."""
 
     @abstractmethod
     async def upsert_sessions(self, user_id: int, sessions: Sequence[LoggedSession]) -> int:

@@ -5,6 +5,17 @@ import { api } from './client'
 import { i18n } from '@/i18n'
 import type { Difficulty, Goal } from './types'
 
+export interface Trainer {
+  id: number
+  name: string
+  specialty: Goal
+  rating: number
+  pricePerMonth: number
+  bio: string | null
+  /** Students they already follow, so the load is visible before hiring. */
+  students: number
+}
+
 export interface StudentSummary {
   id: number
   name: string
@@ -160,4 +171,49 @@ export async function syncProgress(
     level: profile.level,
   })
   return body.synced
+}
+
+interface TrainerPayload {
+  id: number
+  name: string
+  specialty: Goal
+  rating: number
+  price_per_month: number
+  bio: string | null
+  students: number
+}
+
+function toTrainer(payload: TrainerPayload): Trainer {
+  return {
+    id: payload.id,
+    name: payload.name,
+    specialty: payload.specialty,
+    rating: payload.rating,
+    pricePerMonth: payload.price_per_month,
+    bio: payload.bio,
+    students: payload.students,
+  }
+}
+
+/** Everyone may browse the trainers on offer, signed in or not. */
+export async function listTrainers(): Promise<Trainer[]> {
+  const lang = i18n.global.locale.value
+  const payload = await api.get<TrainerPayload[]>(`/coaching/trainers?lang=${lang}`)
+  return payload.map(toTrainer)
+}
+
+/** The trainer the signed-in student hired, or null. */
+export async function myTrainer(): Promise<Trainer | null> {
+  const lang = i18n.global.locale.value
+  const payload = await api.get<TrainerPayload | null>(`/coaching/me/trainer?lang=${lang}`)
+  return payload ? toTrainer(payload) : null
+}
+
+/** Hire a trainer. A student has at most one, so this replaces the current. */
+export async function hireTrainer(trainerId: number): Promise<Trainer> {
+  return toTrainer(await api.put<TrainerPayload>('/coaching/me/trainer', { trainer_id: trainerId }))
+}
+
+export function cancelTrainer(): Promise<void> {
+  return api.remove('/coaching/me/trainer')
 }

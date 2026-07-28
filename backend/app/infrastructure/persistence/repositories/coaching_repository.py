@@ -3,7 +3,7 @@
 from collections.abc import Iterable, Sequence
 from datetime import date, timedelta
 
-from sqlalchemy import Select, case, distinct, func, select
+from sqlalchemy import Select, case, delete, distinct, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,13 +12,15 @@ from app.domain.entities.coaching import (
     LoggedSession,
     Student,
     StudentDetail,
+    Trainer,
     WorkoutLog,
 )
 from app.domain.ports.coaching import CoachingRepository
-from app.domain.value_objects.enums import Difficulty, Goal
+from app.domain.value_objects.enums import Difficulty, Goal, UserRole
 from app.infrastructure.persistence.models.coaching import (
     BodyMetricModel,
     StudentProfileModel,
+    TrainerProfileModel,
     TrainerStudentModel,
     WorkoutLogModel,
 )
@@ -72,7 +74,68 @@ class SqlAlchemyCoachingRepository(CoachingRepository):
     async def get_own_detail(self, user_id: int) -> StudentDetail | None:
         return await self._detail(user_id)
 
+    async def list_trainers(self) -> list[Trainer]:
+        # The student count comes from the roster, so a trainer's load is real
+        # rather than decorative.
+        counts = (
+            select(TrainerStudentModel.trainer_id, func.count().label("students"))
+            .group_by(TrainerStudentModel.trainer_id)
+            .subquery()
+        )
+        rows = await self._session.execute(
+            select(UserModel, TrainerProfileModel, func.coalesce(counts.c.students, 0))
+            .join(TrainerProfileModel, TrainerProfileModel.user_id == UserModel.id)
+            .outerjoin(counts, counts.c.trainer_id == UserModel.id)
+            .where(UserModel.role == UserRole.TRAINER)
+            .order_by(TrainerProfileModel.rating.desc(), UserModel.name)
+        )
+        return [self._to_trainer(user, profile, students) for user, profile, students in rows]
+
+    async def get_trainer_of(self, student_id: int) -> Trainer | None:
+        counts = (
+            select(TrainerStudentModel.trainer_id, func.count().label("students"))
+            .group_by(TrainerStudentModel.trainer_id)
+            .subquery()
+        )
+        row = (
+            await self._session.execute(
+                select(UserModel, TrainerProfileModel, func.coalesce(counts.c.students, 0))
+                .join(TrainerStudentModel, TrainerStudentModel.trainer_id == UserModel.id)
+                .join(TrainerProfileModel, TrainerProfileModel.user_id == UserModel.id)
+                .outerjoin(counts, counts.c.trainer_id == UserModel.id)
+                .where(TrainerStudentModel.student_id == student_id)
+            )
+        ).one_or_none()
+        return self._to_trainer(*row) if row else None
+
     # -- writes --------------------------------------------------------------
+
+    async def assign_trainer(self, student_id: int, trainer_id: int) -> Trainer | None:
+        is_trainer = await self._session.scalar(
+            select(UserModel.id).where(
+                UserModel.id == trainer_id, UserModel.role == UserRole.TRAINER
+            )
+        )
+        if is_trainer is None:
+            return None
+        # One trainer per student: the conflict target is the student, so hiring
+        # another one moves the link instead of adding a second.
+        statement = pg_insert(TrainerStudentModel).values(
+            trainer_id=trainer_id, student_id=student_id
+        )
+        await self._session.execute(
+            statement.on_conflict_do_update(
+                constraint="uq_trainer_student", set_={"trainer_id": trainer_id}
+            )
+        )
+        await self._session.commit()
+        return await self.get_trainer_of(student_id)
+
+    async def unassign_trainer(self, student_id: int) -> None:
+        await self._session.execute(
+            delete(TrainerStudentModel).where(TrainerStudentModel.student_id == student_id)
+        )
+        await self._session.commit()
 
     async def upsert_sessions(self, user_id: int, sessions: Sequence[LoggedSession]) -> int:
         if not sessions:
@@ -163,6 +226,17 @@ class SqlAlchemyCoachingRepository(CoachingRepository):
         await self._session.commit()
 
     # -- internals -----------------------------------------------------------
+
+    def _to_trainer(self, user: UserModel, profile: TrainerProfileModel, students: int) -> Trainer:
+        return Trainer(
+            id=user.id,
+            name=user.name,
+            specialty=Goal(profile.specialty),
+            rating=profile.rating,
+            price_per_month=profile.price_per_month,
+            bio=pick(profile.bio, profile.bio_en, self._locale) if profile.bio else None,
+            students=students,
+        )
 
     @staticmethod
     def _profile_query() -> Select[tuple[UserModel, StudentProfileModel]]:
