@@ -19,8 +19,9 @@ const loading = ref(true)
 const error = ref(false)
 /** Which item has its report form open, and what is typed in it. */
 const reporting = ref<number | null>(null)
-const draft = reactive<{ weight: number | null; completed: boolean }>({
+const draft = reactive<{ weight: number | null; reps: number | null; completed: boolean }>({
   weight: null,
+  reps: null,
   completed: true,
 })
 const saving = ref(false)
@@ -64,6 +65,7 @@ function openReport(item: PlanItem): void {
   reporting.value = item.id
   // Pre-filled with the target: hitting it is one tap, adjusting is a nudge.
   draft.weight = item.doneWeightKg ?? item.targetWeightKg ?? 0
+  draft.reps = item.doneReps ?? item.targetReps
   draft.completed = item.status === 'done' || item.doneWeightKg === null
 }
 
@@ -73,7 +75,7 @@ async function save(item: PlanItem): Promise<void> {
     const updated = await reportPlanItem(
       item.id,
       draft.weight ?? 0,
-      item.targetReps,
+      draft.reps ?? item.targetReps,
       draft.completed,
     )
     items.value = items.value.map((entry) => (entry.id === updated.id ? updated : entry))
@@ -126,7 +128,7 @@ function targetLabel(item: PlanItem): string {
                 <p class="target">
                   {{ targetLabel(item) }}
                   <span v-if="item.doneWeightKg !== null" class="lifted">
-                    · {{ t('plan.lifted', { kg: item.doneWeightKg }) }}
+                    · {{ t('plan.lifted', { kg: item.doneWeightKg, reps: item.doneReps }) }}
                   </span>
                 </p>
                 <p v-if="item.notes" class="notes">“{{ item.notes }}”</p>
@@ -146,6 +148,10 @@ function targetLabel(item: PlanItem): string {
               <label class="field">
                 <span class="field-label">{{ t('plan.weightLifted') }}</span>
                 <input v-model.number="draft.weight" type="number" min="0" step="0.5" />
+              </label>
+              <label class="field">
+                <span class="field-label">{{ t('plan.repsDone') }}</span>
+                <input v-model.number="draft.reps" type="number" min="0" max="100" />
               </label>
               <label class="check">
                 <input v-model="draft.completed" type="checkbox" />

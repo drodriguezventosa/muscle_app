@@ -159,7 +159,7 @@ function targetLabel(item: PlanItem): string {
             <p class="target">
               {{ targetLabel(item) }}
               <span v-if="item.doneWeightKg !== null" class="lifted">
-                · {{ t('plan.lifted', { kg: item.doneWeightKg }) }}
+                · {{ t('plan.lifted', { kg: item.doneWeightKg, reps: item.doneReps }) }}
               </span>
             </p>
           </div>

@@ -129,19 +129,21 @@ describe('PlanView', () => {
 
   it('reports what was lifted and shows the status that came back', async () => {
     myPlan.mockResolvedValue([item()])
-    reportPlanItem.mockResolvedValue(item({ status: 'partial', doneWeightKg: 92.5, doneReps: 8 }))
+    reportPlanItem.mockResolvedValue(item({ status: 'partial', doneWeightKg: 92.5, doneReps: 6 }))
 
     const wrapper = mount(PlanView, { global })
     await flushPromises()
     await wrapper.findAll('.strip .day')[2].trigger('click')
 
     await wrapper.find('.report-btn').trigger('click')
-    await wrapper.find('.report input[type="number"]').setValue(92.5)
+    const [weight, reps] = wrapper.findAll('.report input[type="number"]')
+    await weight.setValue(92.5)
+    await reps.setValue(6)
     await wrapper.find('form.report').trigger('submit')
     await flushPromises()
 
-    // Reps come from the target: the student says the weight, not the maths.
-    expect(reportPlanItem).toHaveBeenCalledWith(1, 92.5, 8, true)
+    // Both numbers travel: falling short can be less weight, fewer reps, or both.
+    expect(reportPlanItem).toHaveBeenCalledWith(1, 92.5, 6, true)
     expect(wrapper.find('.badge').classes()).toContain('partial')
     expect(wrapper.text()).toContain('92.5')
   })
