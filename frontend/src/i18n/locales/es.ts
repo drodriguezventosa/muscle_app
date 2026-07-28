@@ -303,10 +303,11 @@ export default {
     youAreTrainer: 'Estás dentro como entrenador.',
     goToStudents: 'Ir a mis alumnos',
     eyebrow: 'Entrenadores',
-    preview: 'Vista previa',
     titleHighlight: 'Entrena con',
     titleRest: 'un profesional',
-    lead: 'Contrata un entrenador personal o, si eres entrenador, gestiona a tus alumnos. Demostración del potencial de la app (aún sin pagos ni cuentas reales).',
+    // La relación entrenador-alumno sí es real (se guarda en la cuenta); lo
+    // único simulado es el cobro, y eso es lo que hay que decir.
+    lead: 'Contrata un entrenador personal o, si eres entrenador, gestiona a tus alumnos. El pago es una simulación: no se cobra nada.',
     tabHire: 'Contratar entrenador',
     tabCoach: 'Panel del entrenador',
     perMonth: '/mes',
