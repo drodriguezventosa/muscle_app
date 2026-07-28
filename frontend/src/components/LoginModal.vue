@@ -49,9 +49,9 @@ async function submit(): Promise<void> {
   close()
   // Whatever the browser recorded before signing in belongs to this account now.
   void progress.sync()
-  // Land on the area for the role: a trainer manages students, a student looks
-  // for a trainer. A blocked route (from the guard) still wins.
-  const target = auth.consumeRedirect() ?? (auth.isTrainer ? '/students' : '/trainers')
+  // Land on the area for the role: a trainer manages their students, a student
+  // sees what they have to train today. A blocked route (from the guard) wins.
+  const target = auth.consumeRedirect() ?? (auth.isTrainer ? '/students' : '/plan')
   await router.push(target)
 }
 
