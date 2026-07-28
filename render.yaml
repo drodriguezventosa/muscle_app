@@ -43,6 +43,17 @@ services:
         value: openrouter
       - key: CACHE_PROVIDER
         value: redis
+      # Signing key for the session tokens. Render generates a random value per
+      # service, so the secret is never committed nor shared — and the app
+      # refuses to boot in production with the development default, which is
+      # what stopped the first deploy after sign-in shipped.
+      - key: JWT_SECRET
+        generateValue: true
+      # Password of the two demo accounts, shown in the sign-in form on purpose.
+      # Dashboard-managed so it can be rotated without a deploy; unset falls back
+      # to the default in Settings.demo_password.
+      - key: DEMO_PASSWORD
+        sync: false
       # --- Set these in the Render dashboard (Environment); never committed ---
       - key: POSTGRES_HOST # from Neon
         sync: false
