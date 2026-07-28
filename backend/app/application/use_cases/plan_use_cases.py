@@ -65,20 +65,35 @@ class ListStudentPlan:
         if await self._coaching.get_student(trainer_id, student_id) is None:
             raise StudentNotAssignedError
         start, end = _clamp(start, end)
-        items = await self._plans.list_for_student(student_id, start, end)
+        items = await self._plans.list_for_student(student_id, trainer_id, start, end)
         return [ScheduledExercise(item, item.status(self._today)) for item in items]
 
 
 class ListOwnPlan:
-    """The signed-in student's own calendar."""
+    """The signed-in student's own calendar: the one their trainer is writing.
 
-    def __init__(self, plans: TrainingPlanRepository, today: date | None = None) -> None:
+    A student has one trainer at a time (ADR-0024) and each trainer keeps their
+    own calendar, so changing trainer changes the plan. The previous one's
+    prescriptions are not deleted — they stay with that trainer, and come back if
+    the student hires them again.
+    """
+
+    def __init__(
+        self,
+        plans: TrainingPlanRepository,
+        coaching: CoachingRepository,
+        today: date | None = None,
+    ) -> None:
         self._plans = plans
+        self._coaching = coaching
         self._today = today or date.today()
 
     async def execute(self, student_id: int, start: date, end: date) -> list[ScheduledExercise]:
+        trainer = await self._coaching.get_trainer_of(student_id)
+        if trainer is None or trainer.id is None:
+            return []  # nobody is writing a plan; the UI sends them to hire one
         start, end = _clamp(start, end)
-        items = await self._plans.list_for_student(student_id, start, end)
+        items = await self._plans.list_for_student(student_id, trainer.id, start, end)
         return [ScheduledExercise(item, item.status(self._today)) for item in items]
 
 
@@ -127,9 +142,14 @@ class UnscheduleExercise:
 
     async def execute(self, trainer_id: int, item_id: int) -> None:
         item = await self._plans.get(item_id)
-        # Checked against the roster rather than "who created it", so a trainer
-        # can tidy up a plan they inherited — but never another trainer's.
-        if item is None or await self._coaching.get_student(trainer_id, item.student_id) is None:
+        # Their own calendar and their own student: a trainer edits what they
+        # wrote, never what another trainer wrote for the same person. 404 rather
+        # than 403, so item ids cannot be probed (OWASP A01).
+        if (
+            item is None
+            or item.trainer_id != trainer_id
+            or await self._coaching.get_student(trainer_id, item.student_id) is None
+        ):
             raise PlanItemNotFoundError
         await self._plans.remove(item_id)
 
@@ -159,6 +179,11 @@ class ReportPlanItem:
     ) -> PlanItem:
         item = await self._plans.get(item_id)
         if item is None or item.student_id != student_id:
+            raise PlanItemNotFoundError
+        # Only against the plan they can actually see: after changing trainer, a
+        # previous trainer's prescription is no longer theirs to report on.
+        trainer = await self._coaching.get_trainer_of(student_id)
+        if trainer is None or item.trainer_id != trainer.id:
             raise PlanItemNotFoundError
         # Whether the plan was met is arithmetic on the three numbers, so the
         # server works it out rather than trusting a flag from the client.

@@ -58,11 +58,14 @@ class SqlAlchemyTrainingPlanRepository(TrainingPlanRepository):
             done_completed=log.completed if log else None,
         )
 
-    async def list_for_student(self, student_id: int, start: date, end: date) -> list[PlanItem]:
+    async def list_for_student(
+        self, student_id: int, trainer_id: int, start: date, end: date
+    ) -> list[PlanItem]:
         rows = await self._session.execute(
             self._query()
             .where(
                 PlanItemModel.student_id == student_id,
+                PlanItemModel.trainer_id == trainer_id,
                 PlanItemModel.scheduled_on >= start,
                 PlanItemModel.scheduled_on <= end,
             )

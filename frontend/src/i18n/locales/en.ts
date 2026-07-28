@@ -91,9 +91,33 @@ export default {
         title: 'Progress',
         body: 'Log the weight for each exercise and track your evolution session by session. Stored on this device.',
       },
+      mealPhoto: {
+        title: 'Photo of your plate',
+        body: 'Take a photo of your meal and the AI estimates which foods are on it and their macros. Fix the amounts and names before adding them to the menu.',
+      },
       trainers: {
         title: 'Trainers',
-        body: 'Hire a personal trainer or manage your students. This is a preview: no real payments or accounts yet.',
+        body: 'Hire a trainer and the relationship is kept on your account: a student has one trainer, a trainer many students. The payment is a simulation and never asks for card details.',
+      },
+      plan: {
+        title: 'My plan',
+        body: 'The calendar your trainer writes for you. Report each exercise with the sets, reps and weight you actually did; falling short marks it partial, and your trainer sees that.',
+      },
+      planPreview: {
+        title: 'My plan',
+        body: 'Hiring a trainer adds "My plan": your week with what they scheduled, where you report what you did. Each trainer keeps their own calendar, so changing trainer hands the plan over to the new one.',
+      },
+      students: {
+        title: 'Your students',
+        body: 'Pick a student to see how they are doing: estimated 1RM per exercise, body weight and sessions per week. Click them again to go back to the whole group.',
+      },
+      studentPlan: {
+        title: 'Scheduling the week',
+        body: 'In each student calendar you add exercises day by day with target sets, reps and weight. They see it under "My plan" and report back what they managed to lift.',
+      },
+      signIn: {
+        title: 'Sign in',
+        body: 'The coaching area needs an account. Use "Sign in" in the header: this is a demo, so the credentials come pre-filled, as a student or as a trainer.',
       },
       assistant: {
         title: 'AI assistant',
@@ -276,10 +300,9 @@ export default {
     youAreTrainer: 'You are signed in as a trainer.',
     goToStudents: 'Go to my students',
     eyebrow: 'Trainers',
-    preview: 'Preview',
     titleHighlight: 'Train with',
     titleRest: 'a pro',
-    lead: 'Hire a personal trainer, or manage your students if you are one. A preview of the app potential (no real payments or accounts yet).',
+    lead: 'Hire a personal trainer, or manage your students if you are one. The payment is a simulation: nothing is ever charged.',
     tabHire: 'Hire a trainer',
     tabCoach: 'Trainer dashboard',
     perMonth: '/mo',

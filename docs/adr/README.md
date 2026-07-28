@@ -32,3 +32,4 @@ sequentially; supersede rather than edit past decisions.
 | [0023](0023-training-calendar.md) | Training calendar: prescription apart from what was lifted | accepted |
 | [0024](0024-one-trainer-per-student.md) | One trainer per student, and a demo year behind it | accepted |
 | [0025](0025-boot-reconciles-schema-changes.md) | The boot reconciles schema *changes*, and the seed fills gaps | accepted |
+| [0026](0026-the-plan-belongs-to-the-pair.md) | The plan belongs to the trainer-student pair | accepted |

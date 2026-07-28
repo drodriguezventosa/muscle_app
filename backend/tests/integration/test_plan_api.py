@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.infrastructure.persistence.models.exercise import ExerciseModel
+from app.infrastructure.persistence.models.plan import PlanItemModel
 
 TRAINER_EMAIL = "entrenador@demo.muscleapp"
 CLIENT_EMAIL = "alumno@demo.muscleapp"
@@ -84,6 +85,69 @@ async def test_a_trainer_schedules_and_the_student_sees_it(
     mine = next(entry for entry in plan if entry["id"] == created.json()["id"])
     assert mine["target_weight_kg"] == 90
     assert mine["notes"] == "Sube 2,5 kg si sale limpio"
+
+
+async def test_changing_trainer_hands_the_calendar_over(
+    api_client: AsyncClient, session: AsyncSession
+) -> None:
+    """The plan belongs to the trainer-student pair, so hiring another one resets it.
+
+    Each trainer keeps their own calendar for the same student: the new one starts
+    from an empty week and writes their own, and the previous one's prescriptions
+    stay with them rather than being inherited or deleted.
+    """
+    student = await _auth(api_client, CLIENT_EMAIL)
+    monday = date.today() - timedelta(days=date.today().weekday())
+    sunday = monday + timedelta(days=6)
+    window = f"from={monday.isoformat()}&to={sunday.isoformat()}"
+    seeded = (await api_client.get(f"/api/v1/coaching/me/plan?{window}", headers=student)).json()
+    assert seeded, "the seed leaves this week on Ana's calendar"
+
+    trainers = (await api_client.get("/api/v1/coaching/trainers")).json()
+    marco = next(trainer for trainer in trainers if trainer["name"] != "Ana López")
+    hired = await api_client.put(
+        "/api/v1/coaching/me/trainer", json={"trainer_id": marco["id"]}, headers=student
+    )
+    assert hired.status_code == 200
+
+    # Marco has not scheduled anything yet, so the week is his to fill.
+    after = (await api_client.get(f"/api/v1/coaching/me/plan?{window}", headers=student)).json()
+    assert after == []
+
+    # What Ana had prescribed is no longer the student's to report on.
+    report = await api_client.post(
+        f"/api/v1/coaching/me/plan/{seeded[0]['id']}/report",
+        json={"weight_kg": 80, "reps": 8, "sets": 3},
+        headers=student,
+    )
+    assert report.status_code == 404
+
+    # What Marco prescribes is what the student now sees. He is written straight
+    # into the database because only the advertised trainer can sign in
+    # (ADR-0024), and the point here is the read path, keyed by the pair.
+    exercise_id = await _exercise_id(session)
+    tomorrow = date.today() + timedelta(days=1)
+    student_id = (await api_client.get("/api/v1/auth/me", headers=student)).json()["id"]
+    session.add(
+        PlanItemModel(
+            trainer_id=marco["id"],
+            student_id=student_id,
+            exercise_id=exercise_id,
+            scheduled_on=tomorrow,
+            target_sets=3,
+            target_reps=10,
+            target_weight_kg=60.0,
+        )
+    )
+    await session.commit()
+
+    plan = (
+        await api_client.get(
+            f"/api/v1/coaching/me/plan?from={tomorrow.isoformat()}&to={tomorrow.isoformat()}",
+            headers=student,
+        )
+    ).json()
+    assert [entry["target_reps"] for entry in plan] == [10]
 
 
 async def test_rescheduling_the_same_day_edits_the_target(

@@ -60,7 +60,7 @@ function hire(trainer: Trainer): void {
   <section class="trainers">
     <header class="intro animate-in">
       <p class="eyebrow">
-        {{ t('trainers.eyebrow') }} <span class="preview">{{ t('trainers.preview') }}</span>
+        {{ t('trainers.eyebrow') }}
       </p>
       <h1>
         <span class="gradient-text">{{ t('trainers.titleHighlight') }}</span>
@@ -161,14 +161,6 @@ function hire(trainer: Trainer): void {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-}
-.preview {
-  letter-spacing: 0.04em;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  font-size: 0.62rem;
 }
 h1 {
   margin: 0;

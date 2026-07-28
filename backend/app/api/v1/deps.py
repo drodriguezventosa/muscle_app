@@ -208,7 +208,10 @@ def provide_list_student_plan(session: SessionDep, locale: LocaleDep) -> ListStu
 
 
 def provide_list_own_plan(session: SessionDep, locale: LocaleDep) -> ListOwnPlan:
-    return ListOwnPlan(SqlAlchemyTrainingPlanRepository(session, locale))
+    return ListOwnPlan(
+        SqlAlchemyTrainingPlanRepository(session, locale),
+        SqlAlchemyCoachingRepository(session, locale),
+    )
 
 
 def provide_schedule_exercise(session: SessionDep, locale: LocaleDep) -> ScheduleExercise:

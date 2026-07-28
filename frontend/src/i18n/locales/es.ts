@@ -91,9 +91,33 @@ export default {
         title: 'Progreso',
         body: 'Registra el peso de cada ejercicio y sigue tu evolución sesión a sesión. Se guarda en este dispositivo.',
       },
+      mealPhoto: {
+        title: 'Foto del plato',
+        body: 'Hazle una foto a tu comida y la IA estima qué alimentos hay y sus macros. Puedes corregir cantidades y nombres antes de añadirlos al menú.',
+      },
       trainers: {
         title: 'Entrenadores',
-        body: 'Contrata un entrenador personal o gestiona a tus alumnos. Es una demostración: aún sin pagos ni cuentas reales.',
+        body: 'Contrata a un entrenador y la relación queda guardada en tu cuenta: un alumno tiene un entrenador y un entrenador muchos alumnos. El pago es una simulación, nunca pide datos de tarjeta.',
+      },
+      plan: {
+        title: 'Mi plan',
+        body: 'El calendario que te programa tu entrenador. Marca cada ejercicio con las series, repeticiones y peso que hiciste de verdad; si te quedas corto queda como parcial, y tu entrenador lo ve.',
+      },
+      planPreview: {
+        title: 'Mi plan',
+        body: 'Al contratar un entrenador aparece «Mi plan»: tu calendario semanal con lo que te programa, donde marcas lo que hiciste. Cada entrenador lleva su propio calendario, así que si cambias, el plan pasa a ser del nuevo.',
+      },
+      students: {
+        title: 'Tus alumnos',
+        body: 'Elige un alumno y verás su evolución: 1RM estimado por ejercicio, peso corporal y sesiones por semana. Vuelve a pulsarlo para ver otra vez el grupo entero.',
+      },
+      studentPlan: {
+        title: 'Programar la semana',
+        body: 'En el calendario de cada alumno añades ejercicios día a día con series, repeticiones y peso objetivo. Se ve en su «Mi plan», y desde ahí te devuelve lo que consiguió levantar.',
+      },
+      signIn: {
+        title: 'Entrar',
+        body: 'La parte de entrenadores necesita cuenta. Pulsa «Entrar» en la cabecera: es una demo, así que las credenciales vienen ya rellenas, como alumno o como entrenador.',
       },
       assistant: {
         title: 'Asistente con IA',
@@ -279,10 +303,11 @@ export default {
     youAreTrainer: 'Estás dentro como entrenador.',
     goToStudents: 'Ir a mis alumnos',
     eyebrow: 'Entrenadores',
-    preview: 'Vista previa',
     titleHighlight: 'Entrena con',
     titleRest: 'un profesional',
-    lead: 'Contrata un entrenador personal o, si eres entrenador, gestiona a tus alumnos. Demostración del potencial de la app (aún sin pagos ni cuentas reales).',
+    // La relación entrenador-alumno sí es real (se guarda en la cuenta); lo
+    // único simulado es el cobro, y eso es lo que hay que decir.
+    lead: 'Contrata un entrenador personal o, si eres entrenador, gestiona a tus alumnos. El pago es una simulación: no se cobra nada.',
     tabHire: 'Contratar entrenador',
     tabCoach: 'Panel del entrenador',
     perMonth: '/mes',
