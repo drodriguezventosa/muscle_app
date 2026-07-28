@@ -31,3 +31,4 @@ sequentially; supersede rather than edit past decisions.
 | [0022](0022-hand-rolled-svg-charts.md) | Hand-rolled SVG charts with a validated palette | accepted |
 | [0023](0023-training-calendar.md) | Training calendar: prescription apart from what was lifted | accepted |
 | [0024](0024-one-trainer-per-student.md) | One trainer per student, and a demo year behind it | accepted |
+| [0025](0025-boot-reconciles-schema-changes.md) | The boot reconciles schema *changes*, and the seed fills gaps | accepted |

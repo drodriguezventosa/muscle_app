@@ -201,6 +201,8 @@ export default {
     kpiBmi: 'BMI',
     years: '{n} years old',
     strengthTitle: 'Strength progression (estimated 1RM)',
+    oneRmUnit: 'kg est. 1RM',
+    oneRmHint: 'from weight and reps (Epley)',
     noStrength: 'No weighted sets logged yet.',
     sessionsCount: '{n} session | {n} sessions',
     lastActive: 'today | yesterday | {n} days ago',

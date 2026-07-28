@@ -201,6 +201,11 @@ export default {
     kpiBmi: 'IMC',
     years: '{n} años',
     strengthTitle: 'Progresión de fuerza (1RM estimado)',
+    // The chart plots an estimate, not the weight that was lifted: a set of
+    // 3 x 10 with 120 kg becomes a 1RM of 160 kg. The unit says so, because the
+    // tooltip and the list are read on their own, away from the title.
+    oneRmUnit: 'kg de 1RM est.',
+    oneRmHint: 'peso y repeticiones (Epley)',
     noStrength: 'Aún no hay series con peso registradas.',
     sessionsCount: '{n} sesión | {n} sesiones',
     lastActive: 'hoy | ayer | hace {n} días',

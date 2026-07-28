@@ -10,7 +10,8 @@ Run with `python -m app.bootstrap`; the deploy start command then execs uvicorn.
 import asyncio
 import logging
 
-from sqlalchemy import Connection, inspect, text
+from sqlalchemy import Connection, UniqueConstraint, inspect, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.schema import CreateColumn
 
 from app.core.config import get_settings
@@ -63,11 +64,74 @@ def _add_missing_columns(connection: Connection) -> None:
             logger.info("schema_column_added table=%s column=%s", table.name, column.name)
 
 
+def _reconcile_unique_constraints(connection: Connection) -> None:
+    """Make the deployed unique constraints match the ones the models declare.
+
+    Same blind spot as the columns above, one level deeper: `create_all` gave an
+    existing table its constraints when it was first created and never revisits
+    them, so *changing* one reached production as a no-op. That is worse than a
+    missing column, because nothing fails — the rule the constraint expresses is
+    simply not enforced. `uq_trainer_student` moved from (trainer, student) to
+    (student) to mean "a student has at most one trainer"; on the deployed
+    database it stayed on the pair, and hiring a second trainer inserted a second
+    row instead of moving the link.
+
+    Each change is attempted in a savepoint: a constraint the existing data would
+    violate rolls back to the old one and is reported, since resolving that
+    conflict is a migration's job, not a startup step.
+    """
+    inspector = inspect(connection)
+    existing_tables = set(inspector.get_table_names())
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue  # create_all just made it, constraints included
+        deployed = {
+            constraint["name"]: list(constraint["column_names"])
+            for constraint in inspector.get_unique_constraints(table.name)
+            if constraint["name"]
+        }
+        for constraint in table.constraints:
+            if not isinstance(constraint, UniqueConstraint) or not constraint.name:
+                continue
+            name = str(constraint.name)
+            wanted = [column.name for column in constraint.columns]
+            if deployed.get(name) == wanted:
+                continue
+            columns = ", ".join(f'"{column}"' for column in wanted)
+            try:
+                with connection.begin_nested():
+                    if name in deployed:
+                        connection.execute(
+                            text(f'ALTER TABLE "{table.name}" DROP CONSTRAINT "{name}"')
+                        )
+                    connection.execute(
+                        text(
+                            f'ALTER TABLE "{table.name}" ADD CONSTRAINT "{name}" UNIQUE ({columns})'
+                        )
+                    )
+            except SQLAlchemyError as exc:
+                logger.warning(
+                    "schema_constraint_kept table=%s constraint=%s wanted=%s error=%s",
+                    table.name,
+                    name,
+                    wanted,
+                    exc.__class__.__name__,
+                )
+                continue
+            logger.info(
+                "schema_constraint_reconciled table=%s constraint=%s columns=%s",
+                table.name,
+                name,
+                wanted,
+            )
+
+
 async def bootstrap() -> None:
     async with get_engine().begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)  # create missing tables only
         await conn.run_sync(_add_missing_columns)  # ...and columns they gained since
+        await conn.run_sync(_reconcile_unique_constraints)  # ...and rules that changed
     async with get_session_factory()() as session:
         await seed(session)  # skips if already seeded
         # Fills null vectors only, using the configured embedding provider.
