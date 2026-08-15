@@ -1,7 +1,13 @@
 # 12. Trainers/coaching shown as a frontend preview mockup
 
-- Status: accepted
+- Status: superseded by [ADR-0021](0021-coaching-data-and-progress-sync.md),
+  [ADR-0024](0024-one-trainer-per-student.md) and
+  [ADR-0026](0026-the-plan-belongs-to-the-pair.md)
 - Date: 2026-07-14
+
+> The mockup is gone. The coaching area is a real feature: trainers are users with
+> a profile, the trainer-student link lives in the database and gates the plan, and
+> the hard-coded student list and the `localStorage` subscription were deleted.
 
 ## Context
 

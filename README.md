@@ -41,7 +41,7 @@ _Las suscripciones y los pagos siguen siendo una simulación; el registro públi
 
 ## Stack
 
-FastAPI · Vue 3 + Vite · PostgreSQL + pgvector · Groq / Gemini (embeddings) / Ollama · Docker
+FastAPI · Vue 3 + Vite · PostgreSQL + pgvector · Groq (chat) / Jina (embeddings) / OpenRouter (visión) · Docker
 
 ## Arranque rápido (desarrollo)
 

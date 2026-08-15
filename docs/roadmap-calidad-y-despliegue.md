@@ -43,7 +43,8 @@
 | Base de datos | **Neon** (free) | Postgres + **pgvector**. Sin tarjeta; pausa si no se usa (no cobra). |
 | Backend (API) | **Render free** | Sin tarjeta, CD nativo desde GitHub. "Duerme" tras inactividad (arranque frío ~1 min). |
 | LLM del chatbot | **Groq API free** (Llama 3.3 70B) o *stub* | Free tier generoso sin tarjeta. Se eligió sobre Gemini porque su cuota de *chat* gratis es demasiado baja (429). |
-| Embeddings | **Gemini embeddings** (API free) | Vectores reales sin `torch` (no cabría en los 512 MB de Render). Cuota aparte del chat. |
+| Embeddings | **Jina AI** (`jina-embeddings-v3`, free) | Vectores reales sin `torch` (no cabría en los 512 MB de Render). Sustituyó a Gemini: su free tier rechaza las IPs de datacenter, así que funcionaba en local y fallaba en Render (ADR-0019). Trunca a 384 dims, sin tocar el esquema. |
+| Visión (foto del plato) | **OpenRouter** (Gemma multimodal, free) | Única opción gratuita alcanzable desde el despliegue. ~16 s por foto frente a ~2 s de Gemini (ADR-0020). |
 
 **Contrapartidas asumidas:** arranque en frío de Render tras inactividad y límites de
 ritmo del LLM/embeddings gratis — irrelevantes para una demo de TFM.

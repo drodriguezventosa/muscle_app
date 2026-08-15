@@ -8,7 +8,9 @@ Aplicación web de fitness (Trabajo Fin de Máster) con:
 
 1. **Explorador de músculos interactivo** — cuerpo humano en SVG; al seleccionar un músculo se ven los ejercicios recomendados. **Acceso libre, sin login.**
 2. **Chatbot de recomendaciones** — RAG híbrido (filtros SQL + `pgvector`) sobre un catálogo de ejercicios. **Uso libre, sin registro.**
-3. **Auth + monetización (diferido)** — registro, suscripción y entrenadores personales; se añadirá más adelante y **no debe bloquear** el MVP.
+3. **Nutrición** — calculadora de calorías y macros, catálogo de alimentos con menú diario y estimación de un plato por foto. **Uso libre, sin registro.**
+4. **Entrenadores (área con login)** — construida y desplegada: un alumno tiene un entrenador y un entrenador muchos alumnos; calendario de entrenamiento en ambos lados y panel de evolución. **Sin registro público**: solo existen las cuentas demo sembradas.
+5. **Monetización (pendiente)** — el cobro es una simulación etiquetada en el frontend, nunca pide datos de tarjeta. Una pasarela real entraría como un adaptador más detrás de un puerto nuevo.
 
 Restricciones: coste **0/mínimo** (desplegable en free tiers), **arquitectura hexagonal**, **seguridad OWASP**, **tests + CI/CD**, y **buen rendimiento + diseño minimalista** en el front.
 
@@ -19,10 +21,13 @@ Restricciones: coste **0/mínimo** (desplegable en free tiers), **arquitectura h
 | Backend | FastAPI (Python 3.12+), arquitectura hexagonal |
 | Frontend | Vue 3 + Vite + TypeScript (Composition API, Pinia) |
 | BD | PostgreSQL + `pgvector` |
-| IA (LLM) | `LLMPort` → Ollama (dev) / Gemini free tier (deploy) |
-| Embeddings | `sentence-transformers` local (`all-MiniLM-L6-v2`, 384 dims) |
-| Pagos | `PaymentPort` → adapter mock (Stripe en el futuro) |
-| Infra | Docker Compose (dev); Cloud Run + Neon + Vercel (deploy, preparado) |
+| IA (LLM) | `LLMPort` → `stub` (tests) / Ollama (dev) / **Groq** (deploy) / Gemini |
+| Embeddings | `EmbeddingPort` → `fake` (tests) / **Jina** (deploy, 384 dims) / `sentence-transformers` o Gemini (dev) |
+| Visión | `VisionPort` → `stub` (tests) / **OpenRouter** (deploy) / Gemini (dev) |
+| Caché | `CachePort` → memoria (dev) / **Redis · Upstash** (deploy) |
+| Auth | Argon2id + JWT; solo cuentas demo sembradas, sin registro público |
+| Pagos | Simulación en el frontend, sin datos de tarjeta. **Aún no hay `PaymentPort`** |
+| Infra | Docker Compose (dev); **Render + Neon + Vercel** (deploy real). Cloud Run descartado: exige tarjeta |
 
 ## Comandos habituales
 
@@ -92,6 +97,6 @@ Para cambiar de LLM, pagos o BD **no se toca el dominio**: se crea/ajusta un ada
 ## Qué NO hacer
 
 - **No hacer commits ni push por tu cuenta**: la gestión de git (commit, push, PRs) la hace siempre el usuario. Aplica los cambios en el árbol de trabajo, valida, y deja que el usuario los commitee. Si un cambio debe llegar a la CI/PR, indica el comando (p.ej. `! git push ...`) en vez de ejecutarlo.
-- No implementar auth/monetización en el MVP (está diferido); pero mantener el modelo preparado para ello.
+- No abrir registro público ni cobros reales: las cuentas son las demo sembradas y la pasarela es una simulación que nunca pide datos de tarjeta. El login solo protege el área de entrenadores; explorador, chatbot, entrenamientos y nutrición siguen siendo de acceso libre.
 - No introducir dependencias de pago ni servicios que rompan el coste 0.
 - No poner lógica de negocio en `api/` ni acceso a BD en `domain/`.
