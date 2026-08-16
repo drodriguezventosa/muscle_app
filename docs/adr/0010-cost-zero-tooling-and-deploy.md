@@ -1,7 +1,12 @@
 # 10. Cost-zero tooling and deployment (no billable free tiers)
 
-- Status: accepted
+- Status: partially superseded by [ADR-0019](0019-embeddings-provider-jina.md)
 - Date: 2026-07-14
+
+> The cost-zero rule stands and still drives every hosting choice. Two details dated:
+> embeddings run on **Jina AI**, not Gemini; and of the quality tooling listed here,
+> CodeQL, Trivy and Codecov are wired, while SonarCloud and CodeRabbit were never
+> activated (see `docs/roadmap-calidad-y-despliegue.md`).
 
 ## Context
 

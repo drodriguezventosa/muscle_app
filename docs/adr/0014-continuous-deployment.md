@@ -1,7 +1,10 @@
 # 14. Continuous deployment on merge to main
 
-- Status: accepted
+- Status: partially superseded by [ADR-0019](0019-embeddings-provider-jina.md)
 - Date: 2026-07-14
+
+> The continuous-deployment decision stands. Only the aside below is dated: embeddings
+> run on **Jina AI**, not the Gemini API.
 
 ## Context
 
