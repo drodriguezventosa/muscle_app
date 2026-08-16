@@ -92,7 +92,7 @@ Para cambiar de LLM, pagos o BD **no se toca el dominio**: se crea/ajusta un ada
 - **Seguridad OWASP** siempre presente: validación con Pydantic, SQL parametrizado, security headers, CORS allowlist, rate limiting, sin PII/secretos en logs. Revisa la skill `security`.
 - **Disclaimer de salud**: las recomendaciones no son consejo médico; debe mostrarse en explorador y chatbot.
 - **Tests obligatorios** para todo cambio; cobertura mínima 80%. La CI bloquea el merge si fallan lint/tipos/tests/cobertura/SAST.
-- Commits convencionales (`feat:`, `fix:`, `docs:`...). Ramas protegidas; PR revisado por CodeRabbit + SonarCloud.
+- Commits convencionales (`feat:`, `fix:`, `docs:`...). Ramas protegidas. Checks reales de cada PR: **CI** (backend y frontend), **CodeQL**, **Trivy** y el preview de **Vercel**; la cobertura sube a **Codecov**. CodeRabbit y SonarCloud siguen pendientes (ver `docs/roadmap-calidad-y-despliegue.md`).
 
 ## Qué NO hacer
 

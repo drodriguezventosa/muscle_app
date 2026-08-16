@@ -32,6 +32,15 @@ docker compose logs -f backend         # tail a service
 2. Add a healthcheck and `depends_on` conditions where needed.
 3. Put dev-only overrides (ports, volumes) in `docker-compose.override.yml`.
 
-## Deploy (prepared, not executed)
+## Deploy (live)
 
-`infra/deploy/` holds notes/config for Cloud Run (backend), Neon (Postgres+pgvector) and Vercel (frontend). Keep images small and scale-to-zero friendly. All code and comments in English.
+The app is deployed and auto-redeploys on every push to `main`. `render.yaml` (repo root)
+is the backend Blueprint; `infra/deploy/README.md` documents the one-time setup.
+
+- **Backend** → Render free web service (Cloud Run was ruled out: it requires a card).
+- **Database** → Neon (Postgres + pgvector); the schema and seed are bootstrapped on boot.
+- **Frontend** → Vercel Hobby.
+- **AI** → Groq (chat), Jina (embeddings), OpenRouter (vision); Upstash Redis for the cache.
+
+Keep images small and scale-to-zero friendly. Never commit secrets — everything is
+`sync: false` in the Blueprint and set in the Render dashboard. All code and comments in English.

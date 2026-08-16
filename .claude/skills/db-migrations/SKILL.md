@@ -27,8 +27,12 @@ description: Alembic migration workflow and database seeding for the Postgres + 
 
 ## Seeds
 
-- Seed data (muscles, exercise catalog) lives in a dedicated script/module and is idempotent.
-- Precompute exercise embeddings with the local `sentence-transformers` model at seed time.
+- Seed data (muscles, exercises, foods, demo coaching accounts) lives in a dedicated
+  script/module and is idempotent — it fills gaps rather than assuming an empty database.
+- Embeddings are **backfilled after seeding** (`embeddings_backfill.py`) through
+  `EmbeddingPort`, not computed inline: the provider is `fake` in dev/CI and **Jina** in
+  deploy (ADR-0019). Vectors from different models are not comparable, so switching model
+  needs one boot with `EMBEDDING_REBUILD=true`.
 
 ## Rules
 

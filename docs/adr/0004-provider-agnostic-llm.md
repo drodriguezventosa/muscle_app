@@ -1,7 +1,12 @@
 # 4. Provider-agnostic LLM behind a port
 
-- Status: accepted
+- Status: partially superseded by [ADR-0019](0019-embeddings-provider-jina.md)
 - Date: 2026-07-06
+
+> The chat decision still holds: `LLMPort` with Groq in deploy. What changed is the
+> aside below about embeddings — they moved to **Jina AI**, because Google retired the
+> model ([ADR-0018](0018-embedding-model-migration.md)) and its free tier rejects the
+> datacenter IPs Render calls from ([ADR-0019](0019-embeddings-provider-jina.md)).
 
 ## Context
 

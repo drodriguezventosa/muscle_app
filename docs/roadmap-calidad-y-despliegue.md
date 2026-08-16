@@ -23,12 +23,16 @@
 - **Diagramas C4** en `docs/diagrams/` — contexto / contenedores / componentes (Mermaid).
 - **CHANGELOG + SemVer** — historial de versiones legible.
 
-### Estado (a 2026-07-14)
-- ✅ Ya hecho en fases previas: security headers, CORS allowlist, rate limiting, validación
-  Pydantic, logs estructurados (structlog), CI (lint/tipos/tests/cobertura ≥80% backend),
-  CodeQL, Trivy, e2e básico (Playwright, home).
-- ⏳ Pendiente: Lighthouse CI, k6, SonarCloud, CodeRabbit, Codecov, error tracking (GlitchTip
-  o solo logs), ampliar e2e + cobertura frontend, ADRs nuevos + C4 completo, CHANGELOG/SemVer.
+### Estado (a 2026-08-16)
+- ✅ Ya hecho: security headers, CORS allowlist, rate limiting, validación Pydantic, logs
+  estructurados (structlog), CI (lint/tipos/tests/cobertura ≥80% backend — hoy **92,85 %**
+  con **186 tests**), CodeQL, Trivy, **Codecov**, e2e básico (Playwright, home), **26 ADR**,
+  diagramas C4 al día y **CHANGELOG con SemVer** (v1.0.0).
+- ⏳ Pendiente: Lighthouse CI, k6, SonarCloud, CodeRabbit, error tracking (GlitchTip o solo
+  logs), ampliar e2e + cobertura frontend (hoy 85 tests de Vitest, sin umbral).
+
+> Ojo: SonarCloud y CodeRabbit **nunca llegaron a activarse**. Los checks reales de cada PR
+> son CI (backend y frontend), CodeQL, Trivy y el preview de Vercel; la cobertura sube a Codecov.
 
 ## Fase 7 — Despliegue (objetivo 0 €, sin tarjeta)
 
@@ -54,16 +58,20 @@ ritmo del LLM/embeddings gratis — irrelevantes para una demo de TFM.
 - ✅ **Progreso de entrenamiento** (hecho, localStorage — ADR-0011): registro de peso por
   sesión, récord/gráfica día a día y semana a semana, y sugerencia de peso por sobrecarga
   progresiva.
-- ✅ **Entrenadores/coaching** (hecho como maqueta demo — ADR-0012): contratar entrenador
-  (precios €) y panel del entrenador (alumnos, progreso, asignar ejercicios). Frontend, sin
-  pagos/cuentas reales.
-- ✅ **Modo claro/oscuro** (hecho — ADR-0013).
-- ⏳ **Auth + monetización** (fase diferida): convertir la maqueta de entrenadores en real
-  (cuentas, `PaymentPort`, asignaciones persistidas) y sincronizar el progreso al backend.
+- ✅ **Nutrición** (hecho — ADR-0016, ADR-0020): calculadora de calorías/macros, catálogo de
+  alimentos, constructor de menú, chat de comidas (RAG) y estimación por foto.
+- ✅ **Entrenadores/coaching** (hecho **de verdad**): empezó como maqueta de frontend
+  (ADR-0012) y hoy tiene inicio de sesión con cuentas demo, datos en BD e histórico
+  sincronizado (ADR-0021), gráficas SVG propias (ADR-0022), calendario semanal (ADR-0023),
+  **un entrenador por alumno** (ADR-0024) y el plan como propiedad del par (ADR-0026).
+- ✅ **Modo claro/oscuro** (hecho — ADR-0013) y **tour guiado** (ADR-0017).
+- ⏳ **Monetización** (fase diferida): el checkout es una **simulación** (sin datos de tarjeta)
+  y **no existe aún ningún `PaymentPort`** — `infrastructure/payments/` es un paquete vacío
+  reservado. Falta también el **registro público** (hoy solo cuentas demo sembradas).
 
 ## Orden sugerido
 1. Documentación (ADRs + C4) — *en curso*.
 2. Despliegue gratuito (demo pública).
 3. Métricas: Lighthouse + k6.
-4. Integraciones de PR: SonarCloud + CodeRabbit + Codecov.
+4. Integraciones de PR: SonarCloud + CodeRabbit (Codecov ya está).
 5. Observabilidad (GlitchTip o logs) + CHANGELOG/SemVer.

@@ -5,8 +5,12 @@
 1. Crea una rama desde `main`: `feat/…`, `fix/…`, `docs/…`, `chore/…`.
 2. Haz cambios acompañados de **tests**.
 3. Asegura que pasa el control de calidad en local (ver más abajo).
-4. Abre un PR usando la plantilla. CodeRabbit + SonarCloud + CI lo revisarán.
+4. Abre un PR usando la plantilla. Correrán los checks: **CI** (backend y frontend),
+   **CodeQL**, **Trivy** y el preview de **Vercel**; la cobertura se sube a **Codecov**.
 5. Merge solo con todos los checks en verde y la review aprobada.
+
+> CodeRabbit y SonarCloud están en la hoja de ruta, aún no activos
+> (ver `docs/roadmap-calidad-y-despliegue.md`).
 
 ## Commits convencionales
 
