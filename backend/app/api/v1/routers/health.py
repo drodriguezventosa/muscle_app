@@ -1,6 +1,11 @@
 """Liveness and readiness probes (required by Cloud Run and Docker healthchecks)."""
 
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
+
+from app.api.v1.deps import get_cache
+from app.domain.ports.cache import CachePort
 
 router = APIRouter(tags=["health"])
 
@@ -31,3 +36,22 @@ async def ready() -> dict[str, str]:
     own path and call it on demand, never on a schedule.
     """
     return {"status": "ready"}
+
+
+@router.api_route("/health/cache", methods=["GET", "HEAD"], summary="Cache keep-alive probe")
+async def health_cache(cache: Annotated[CachePort, Depends(get_cache)]) -> dict[str, str]:
+    """Touch the cache so a managed Redis (Upstash) registers traffic.
+
+    Upstash archives free-tier databases after a few weeks without commands, so
+    the keep-alive workflow pings this endpoint alongside `/health`. Unlike the
+    database (see `/ready`), touching Redis on a schedule costs nothing: the
+    free tier is billed per command and the ping spends ~9K of the 500K monthly
+    allowance. With the in-memory cache (dev/tests) this is a harmless no-op.
+
+    Always returns 200 — the cache port is best-effort by contract, and this
+    probe exists to generate traffic, not to gate anything. The body reports
+    whether the round-trip actually worked so the workflow logs show it.
+    """
+    await cache.set("health:keepalive", "pong", ttl_seconds=3600)
+    value = await cache.get("health:keepalive")
+    return {"status": "ok", "cache": "ok" if value == "pong" else "unavailable"}

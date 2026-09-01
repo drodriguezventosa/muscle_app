@@ -5,6 +5,11 @@ name: Keep-alive
 # awake. A single free instance running ~24/7 stays within Render's monthly
 # instance-hours, so it costs nothing.
 #
+# It also pings /health/cache, which does a set/get round-trip on Redis:
+# Upstash archives free-tier databases after a few weeks without commands.
+# Two commands every 10 minutes (~9K/month) is well within the 500K monthly
+# free allowance.
+#
 # Target URL comes from the repo variable BACKEND_URL, falling back to the known
 # Render URL. Note: GitHub's scheduled runs can be delayed under load — if you
 # need a stricter cadence, a free external monitor (UptimeRobot, cron-job.org)
@@ -33,4 +38,16 @@ jobs:
             echo "" && echo "awake"
           else
             echo "ping failed (backend may be waking up)"
+          fi
+
+      - name: Ping cache keep-alive
+        run: |
+          URL="${{ vars.BACKEND_URL || 'https://muscleapp-api.onrender.com' }}"
+          echo "Pinging ${URL}/health/cache"
+          # Keeps the Upstash free-tier Redis from being archived for inactivity.
+          # The body reports "cache": "ok" | "unavailable"; either way don't fail.
+          if curl -fsS --max-time 90 "${URL}/health/cache"; then
+            echo "" && echo "cache touched"
+          else
+            echo "cache ping failed (backend may be waking up)"
           fi
