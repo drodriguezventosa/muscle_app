@@ -10,9 +10,12 @@ on:
 permissions:
   contents: read
 
+# One run per ref. A newer push to a PR cancels the run it supersedes; pushes to
+# main never do, so every merge commit keeps its own CI verdict (two merges a
+# few seconds apart once left the first one "cancelled" and only the second tested).
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend:

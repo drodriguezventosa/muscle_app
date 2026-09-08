@@ -45,6 +45,8 @@ dev = [
     "bandit[toml]>=1.7",
     "pip-audit>=2.7",
     "aiosqlite>=0.20",
+    # Pins the calendar the integration tests run on (see tests/integration/conftest.py).
+    "time-machine>=3.0",
 ]
 
 # Package only the application code; `alembic/` and `tests/` are not part of the wheel.

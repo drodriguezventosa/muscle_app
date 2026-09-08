@@ -16,6 +16,7 @@ A strong test suite lets us **self-validate every change** by running it — nev
 - `tests/e2e/` — full request/response flows through the app.
 - Shared fixtures in `tests/conftest.py` (`client`, `settings`).
 - Coverage gate: **≥ 80%** (`--cov-fail-under=80` in `pyproject.toml`).
+- Integration tests run on a **fixed calendar day** (`FROZEN_NOW` in `tests/integration/conftest.py`, via `time-machine`): the demo seed is generated around "today" and has deload weeks, so real dates made the suite fail on some weeks. Build test dates from `date.today()` inside the test (it is frozen too), never from hardcoded 2026 dates.
 
 ```bash
 cd backend && pytest                         # tests + coverage gate
