@@ -16,17 +16,17 @@
   },
   "dependencies": {
     "pinia": "^2.2.2",
-    "vue": "^3.5.40",
+    "vue": "^3.5.42",
     "vue-i18n": "^10.0.8",
     "vue-router": "^4.4.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.0",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^20.16.0",
     "@vitejs/plugin-vue": "^5.1.0",
     "@vue/eslint-config-prettier": "^9.0.0",
     "@vue/eslint-config-typescript": "^13.0.0",
-    "@vue/test-utils": "^2.4.6",
+    "@vue/test-utils": "^2.5.0",
     "eslint": "^8.57.0",
     "eslint-plugin-vue": "^9.28.0",
     "jsdom": "^25.0.0",
